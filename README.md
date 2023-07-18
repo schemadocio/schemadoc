@@ -6,6 +6,8 @@ SchemaDoc is an open-source project that allows you to compare OpenAPI schemas a
 Swagger-like manner. It provides a convenient way to track changes between different versions of OpenAPI schemas and
 identify breaking changes.
 
+![SchemaDoc Project View](assets/screenshot.png)
+
 ## Features
 
 - **Project and Versions**: You can create projects and manage multiple versions of OpenAPI schemas within each project.
