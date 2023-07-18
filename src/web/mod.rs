@@ -6,9 +6,10 @@ mod utils;
 mod versions;
 
 use actix_cors::Cors;
-use actix_files::Files;
+use actix_files::{Files, NamedFile};
 use actix_web::web::PayloadConfig;
 use actix_web::{error, middleware, web, App, HttpResponse, HttpServer};
+use actix_web::dev::{ServiceRequest, ServiceResponse};
 use anyhow::bail;
 use tokio::sync::RwLock;
 
@@ -21,6 +22,22 @@ use crate::web::projects::get_projects_api_scope;
 use crate::web::versions::get_versions_api_scope;
 
 pub type AppStateType = RwLock<AppState>;
+
+fn get_ui_service(config: &Config) -> Files {
+    let index_path = format!("{}/index.html", config.frontend_static_files);
+
+    async fn default_handler(req: ServiceRequest, index_path: String) -> error::Result<ServiceResponse> {
+        let (req, _) = req.into_parts();
+        let file = NamedFile::open_async(index_path).await?;
+        let res = file.into_response(&req);
+        Ok(ServiceResponse::new(req, res))
+    }
+
+    Files::new("/", config.frontend_static_files.clone())
+        .prefer_utf8(true)
+        .index_file("a++--")
+        .default_handler(move |req| default_handler(req, index_path.clone()))
+}
 
 pub async fn serve(host: &str, port: u16) -> anyhow::Result<()> {
     let config = web::Data::new(Config::from_env());
@@ -49,10 +66,6 @@ pub async fn serve(host: &str, port: u16) -> anyhow::Result<()> {
 
         let payload_config = PayloadConfig::default().limit(10 * 1024 * 1024);
 
-        let files = Files::new("/static", config.frontend_static_files.clone())
-            .prefer_utf8(true)
-            .index_file("index.html");
-
         App::new()
             .wrap(cors)
             .wrap(middleware::Compress::default())
@@ -60,7 +73,6 @@ pub async fn serve(host: &str, port: u16) -> anyhow::Result<()> {
             .app_data(config.clone())
             .app_data(json_config)
             .app_data(payload_config)
-            .service(files)
             .service(
                 web::scope("/v1")
                     .service(get_common_api_scope())
@@ -68,10 +80,11 @@ pub async fn serve(host: &str, port: u16) -> anyhow::Result<()> {
                     .service(get_projects_api_scope())
                     .service(get_datasource_api_scope()),
             )
+            .service(get_ui_service(&config))
     })
-    .bind((host, port))?
-    .run()
-    .await?;
+        .bind((host, port))?
+        .run()
+        .await?;
 
     Ok(())
 }

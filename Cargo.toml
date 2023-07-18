@@ -8,6 +8,11 @@ keywords = ["openapi", "diff", "breaking", "changes"]
 license = "Apache-2.0"
 autotests = false
 
+[workspace]
+members = [
+    "crates/schemadoc-diff"
+]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -26,6 +31,6 @@ async-trait = "0.1"
 actix-cors = "0.6.4"
 clap = { version = "4", features = ["derive"] }
 reqwest = { version = "0.11.18", features = ["json"] }
-schemadoc-diff = { git = "https://github.com/schemadocio/schemadoc-diff.git", version = "0.1.0" }
+schemadoc-diff = { path = "crates/schemadoc-diff", version = "0.1.20" }
 
 

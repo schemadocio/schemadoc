@@ -1,2 +1,9 @@
-target
+# Rust build folder
+**/target
+
+# Local storage dev folder
 persistence
+
+# UI folders
+**/build
+**/node_modules

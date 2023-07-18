@@ -1,0 +1,75 @@
+{
+  "openapi": "3.0.3",
+  "paths": {
+    "/test": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "number",
+                "enum": [
+                  1,
+                  2,
+                  3
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "prop1": {
+                      "type": "number"
+                    },
+                    "prop3": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test2": {
+      "post": {
+        "responses": {
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "prop1": {
+                      "type": "number",
+                      "enum": [
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    "prop2": {
+                      "type": "object",
+                      "properties": {
+                        "prop1": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

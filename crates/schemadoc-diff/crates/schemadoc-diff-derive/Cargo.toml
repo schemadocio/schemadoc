@@ -1,0 +1,16 @@
+[package]
+name = "schemadoc-diff-derive"
+version = "0.1.0"
+edition = "2018"
+description = "Traits deriving for schemadoc-diff"
+authors = ["Dzmitry Bukhta <bukhta.d@gmail.com>"]
+license = "Apache-2.0"
+autotests = false
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2.0", features = ["derive"] }
+quote = "1.0"
+proc-macro2 = "1.0"

@@ -20,7 +20,7 @@ impl Config {
         let persistence = std::env::var("SD_PERSISTENCE")
             .unwrap_or_else(|_| "local".to_owned());
         let persistence_path = std::env::var("SD_PERSISTENCE_PATH")
-            .unwrap_or_else(|_| "/schemadoc".to_owned());
+            .unwrap_or_else(|_| "./persistence".to_owned());
 
         let pull_disable_after_attempt: u32 = std::env::var("SD_PULL_DISABLE_AFTER_ATTEMPT")
             .unwrap_or_else(|_| "0".to_owned())

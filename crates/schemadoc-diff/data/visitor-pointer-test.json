@@ -1,0 +1,79 @@
+{
+  "openapi": "3.0.3",
+  "paths": {
+    "/{entity_type}/{id}/change_tags": {
+      "post": {
+        "tags": [
+          "Tags"
+        ],
+        "parameters": [
+          {
+            "name": "parameter 1",
+            "in": "body"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Tags to add to or remove from the entity.",
+                "properties": {
+                  "add": {
+                    "type": "array",
+                    "description": "Array of tags and/or tag references to add to the entity.\nFor elements with type `tag_reference`, the tag with the corresponding `id` is added to the entity.\nFor elements with type `tag`, if there is an existing tag with the given\nlabel that tag is added to the entity. If there is no existing tag with that label and the user has permission\nto create tags, a new tag is created with that label and assigned to the entity.\n",
+                    "items": {
+                      "title": "Tags to add",
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "tag",
+                            "tag_reference"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The tags were added and/or removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "examples": {
+                  "response": {
+                    "summary": "Request Example",
+                    "value": {
+                      "add": [
+                        {
+                          "type": "tag",
+                          "label": "Batman"
+                        },
+                        {
+                          "type": "tag_reference",
+                          "id": "P5IYCNZ"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -2,3 +2,4 @@
 /persistence
 .idea
 .env
+Cargo.lock
