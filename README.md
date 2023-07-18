@@ -42,7 +42,7 @@ data:
         is_active: true
         service: Slack
         service_config:
-          hook: https://hooks.slack.com/services/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
+          hook: https://hooks.slack.com/services/ABCDEFGHIJK/123456789/A1B2C3D4e5f6
 
     data_source:
       name: Stripe Github raw
