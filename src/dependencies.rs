@@ -1,9 +1,9 @@
 use anyhow::anyhow;
 use schemadoc_diff::checker::validate;
 
-use crate::versions;
 use crate::app_state::AppState;
 use crate::models::{Dependency, ProjectSlug};
+use crate::versions;
 
 pub async fn update_dependency_status(
     app_state: &mut AppState,
@@ -19,23 +19,27 @@ pub async fn update_dependency_status(
             return Ok(());
         };
 
-        let tgt_version = tgt_versions.last()
+        let tgt_version = tgt_versions
+            .last()
             .ok_or(anyhow!("Dependency latest version not found"))?;
 
         tgt_version.id
     };
 
     let dependency = get_dependency(app_state, src_project_slug, tgt_project_slug)
-        .await.ok_or(anyhow!("Dependency not found"))?;
+        .await
+        .ok_or(anyhow!("Dependency not found"))?;
 
     let breaking = {
         let diff = versions::services::compare_versions(
-            app_state, tgt_project_slug, dependency.version, tgt_version_id,
-        ).await?;
+            app_state,
+            tgt_project_slug,
+            dependency.version,
+            tgt_version_id,
+        )
+        .await?;
 
-        diff
-            .get()
-            .map(|diff| !validate(&diff, &["*"]).is_empty())
+        diff.get().map(|diff| !validate(diff, &["*"]).is_empty())
     };
 
     let outdated = Some(dependency.version != tgt_version_id);
@@ -75,21 +79,27 @@ pub async fn get_dependency<'s>(
     dependencies.iter().find(|v| &v.project == tgt_project_slug)
 }
 
-
 pub async fn update_dependent_projects(
-    app_state: &mut AppState, tgt_project_slug: &ProjectSlug,
+    app_state: &mut AppState,
+    tgt_project_slug: &ProjectSlug,
 ) -> anyhow::Result<Vec<ProjectSlug>> {
-    let slugs = app_state.projects.values().filter_map(|p| {
-        let has_dep = p.dependencies.as_ref()
-            .map(|d| d.iter().any(|d| &d.project == tgt_project_slug))
-            .unwrap_or(false);
+    let slugs = app_state
+        .projects
+        .values()
+        .filter_map(|p| {
+            let has_dep = p
+                .dependencies
+                .as_ref()
+                .map(|d| d.iter().any(|d| &d.project == tgt_project_slug))
+                .unwrap_or(false);
 
-        if has_dep {
-            Some(p.slug.clone())
-        } else {
-            None
-        }
-    }).collect::<Vec<_>>();
+            if has_dep {
+                Some(p.slug.clone())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
 
     for src_project_slug in slugs.iter() {
         update_dependency_status(app_state, src_project_slug, tgt_project_slug).await?;

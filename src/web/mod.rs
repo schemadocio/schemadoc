@@ -7,9 +7,9 @@ mod versions;
 
 use actix_cors::Cors;
 use actix_files::{Files, NamedFile};
+use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::web::PayloadConfig;
 use actix_web::{error, middleware, web, App, HttpResponse, HttpServer};
-use actix_web::dev::{ServiceRequest, ServiceResponse};
 use anyhow::bail;
 use tokio::sync::RwLock;
 
@@ -26,7 +26,10 @@ pub type AppStateType = RwLock<AppState>;
 fn get_ui_service(config: &Config) -> Files {
     let index_path = format!("{}/index.html", config.frontend_static_files);
 
-    async fn default_handler(req: ServiceRequest, index_path: String) -> error::Result<ServiceResponse> {
+    async fn default_handler(
+        req: ServiceRequest,
+        index_path: String,
+    ) -> error::Result<ServiceResponse> {
         let (req, _) = req.into_parts();
         let file = NamedFile::open_async(index_path).await?;
         let res = file.into_response(&req);
@@ -82,9 +85,9 @@ pub async fn serve(host: &str, port: u16) -> anyhow::Result<()> {
             )
             .service(get_ui_service(&config))
     })
-        .bind((host, port))?
-        .run()
-        .await?;
+    .bind((host, port))?
+    .run()
+    .await?;
 
     Ok(())
 }

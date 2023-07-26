@@ -15,7 +15,6 @@ pub struct AlertInfo<'s> {
     pub service_config: &'s Mapping,
 }
 
-
 pub async fn get_own_alerts_info<'s>(
     config: &Config,
     project: &'s Project,
@@ -40,12 +39,11 @@ pub async fn get_own_alerts_info<'s>(
         let fields = [
             ("Project", project.name.as_str()),
             ("Kind", project.kind.as_str()),
-        ].into();
+        ]
+        .into();
 
         let breaking_only = matches!(alert.kind, AlertKind::Breaking);
-        let markdown = diff.export(
-            fields, &version_url, breaking_only, None, Some(validations),
-        );
+        let markdown = diff.export(fields, &version_url, breaking_only, None, Some(validations));
 
         if markdown.is_empty() {
             println!("Alert markdown is empty");
@@ -70,7 +68,6 @@ pub async fn get_own_alerts_info<'s>(
     Ok(info)
 }
 
-
 pub async fn get_deps_alerts_info<'s>(
     config: &Config,
     project: &'s Project,
@@ -83,9 +80,8 @@ pub async fn get_deps_alerts_info<'s>(
     let mut info = Vec::new();
 
     for dep in dep_projects {
-        let version_url = config.url_to_version_client(
-            &dep.slug, &project.slug, src_version_id, tgt_version_id,
-        );
+        let version_url =
+            config.url_to_version_client(&dep.slug, &project.slug, src_version_id, tgt_version_id);
 
         let Some(alerts) = dep.alerts.as_ref() else { continue; };
 
@@ -103,16 +99,12 @@ pub async fn get_deps_alerts_info<'s>(
                 ("Project", dep.name.as_str()),
                 ("Kind", dep.kind.as_str()),
                 ("Dependency", project.name.as_str()),
-            ].into();
+            ]
+            .into();
 
             let breaking_only = matches!(alert.kind, AlertKind::Breaking);
-            let markdown = diff.export(
-                fields,
-                &version_url,
-                breaking_only,
-                None,
-                Some(validations),
-            );
+            let markdown =
+                diff.export(fields, &version_url, breaking_only, None, Some(validations));
 
             if markdown.is_empty() {
                 println!("Alert markdown is empty");
@@ -134,7 +126,6 @@ pub async fn get_deps_alerts_info<'s>(
             });
         }
     }
-
 
     Ok(info)
 }

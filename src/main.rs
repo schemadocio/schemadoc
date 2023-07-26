@@ -1,13 +1,13 @@
 pub mod alerts;
 pub mod app_state;
 pub mod config;
+pub mod dependencies;
 pub mod models;
 pub mod persistence;
 pub mod projects;
 pub mod scheduler;
 pub mod storage;
 pub mod versions;
-pub mod dependencies;
 pub mod web;
 
 use clap::{Parser, Subcommand};
@@ -50,7 +50,11 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command.unwrap() {
-        Commands::Serve { host, port, schedule } => {
+        Commands::Serve {
+            host,
+            port,
+            schedule,
+        } => {
             tokio::select! {
                 r = web::serve(&host, port) => {
                     println!("Server exited: {:?}", r)

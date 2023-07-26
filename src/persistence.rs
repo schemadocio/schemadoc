@@ -29,10 +29,10 @@ pub async fn persist_data_file<T, S, P>(
     path: P,
     state: &T,
 ) -> Result<(), PersistenceError>
-    where
-        T: Versioned + Serialize,
-        S: Storer,
-        P: Into<PathBuf>,
+where
+    T: Versioned + Serialize,
+    S: Storer,
+    P: Into<PathBuf>,
 {
     let path = path.into();
 
@@ -49,10 +49,10 @@ pub async fn persist_data_file<T, S, P>(
 }
 
 pub async fn load_data_file<T, S, P>(storage: &S, path: P) -> Result<T, PersistenceError>
-    where
-        T: Versioned + Default + for<'a> Deserialize<'a>,
-        S: Storer,
-        P: Into<PathBuf>,
+where
+    T: Versioned + Default + for<'a> Deserialize<'a>,
+    S: Storer,
+    P: Into<PathBuf>,
 {
     let path = path.into();
 

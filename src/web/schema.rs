@@ -1,4 +1,7 @@
-use crate::models::{Alert, AlertKind, AlertSource, DataSource, DataSourceSource, DataSourceStatus, Dependency, Project, ProjectSlug, Version};
+use crate::models::{
+    Alert, AlertKind, AlertSource, DataSource, DataSourceSource, DataSourceStatus, Dependency,
+    Project, ProjectSlug, Version,
+};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
@@ -107,8 +110,8 @@ impl<'s> From<&'s Dependency> for DependencyOut<'s> {
         Self {
             version: dependency.version,
             project: dependency.project.as_str(),
-            outdated: dependency.outdated.clone(),
-            breaking: dependency.breaking.clone(),
+            outdated: dependency.outdated,
+            breaking: dependency.breaking,
         }
     }
 }
@@ -130,8 +133,8 @@ impl<'s> From<&'s Project> for ProjectOut<'s> {
         Self {
             slug: &project.slug,
             name: &project.name,
-            kind: &project.kind.as_str(),
-            description: project.description.as_ref().map(|d| d.as_str()),
+            kind: project.kind.as_str(),
+            description: project.description.as_deref(),
             alerts: project
                 .alerts
                 .as_ref()

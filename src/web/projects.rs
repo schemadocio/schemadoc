@@ -4,8 +4,8 @@ use serde::Deserialize;
 use std::ops::DerefMut;
 
 use crate::config::Config;
-use crate::projects;
 use crate::models::{Dependency, ProjectSlug};
+use crate::projects;
 use crate::web::schema::{DependencyOut, ProjectOut};
 use crate::web::utils::json_response;
 use crate::web::AppStateType;
@@ -16,9 +16,7 @@ async fn list_projects_endpoint(state: web::Data<AppStateType>) -> impl Responde
 
     let projects = state.projects.values().collect::<Vec<_>>();
 
-    let out: Vec<_> = projects.into_iter()
-        .map(ProjectOut::from)
-        .collect();
+    let out: Vec<_> = projects.into_iter().map(ProjectOut::from).collect();
 
     json_response(StatusCode::OK, &out)
 }
@@ -34,7 +32,6 @@ async fn get_project_by_id_endpoint(
     json_response(StatusCode::OK, &project.map(ProjectOut::from))
 }
 
-
 #[get("/{slug}/dependents")]
 async fn get_dependents_project_by_id_endpoint(
     path: web::Path<ProjectSlug>,
@@ -44,20 +41,22 @@ async fn get_dependents_project_by_id_endpoint(
 
     let project = state.projects.get(&path.into_inner())?;
 
-    let dependents = state.projects.values().filter_map(|p| {
-        p.dependencies.as_ref().map(
-            |deps| deps.iter()
-                .filter(|d| d.project == project.slug)
-                .map(
-                    |d| Dependency {
+    let dependents = state
+        .projects
+        .values()
+        .filter_map(|p| {
+            p.dependencies.as_ref().map(|deps| {
+                deps.iter()
+                    .filter(|d| d.project == project.slug)
+                    .map(|d| Dependency {
                         project: p.slug.clone(),
                         version: d.version,
                         breaking: d.breaking,
                         outdated: d.outdated,
-                    }
-                )
-        )
-    }).flatten()
+                    })
+            })
+        })
+        .flatten()
         .collect::<Vec<_>>();
 
     let body: Vec<_> = dependents.iter().map(DependencyOut::from).collect();

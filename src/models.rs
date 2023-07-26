@@ -63,13 +63,11 @@ pub struct Project {
 
 impl Project {
     pub async fn load_persistent_data<S>(&mut self, storage: &S) -> anyhow::Result<()>
-        where
-            S: Storer,
+    where
+        S: Storer,
     {
         let version_file_path = format!("projects/{}/versions.yaml", self.slug);
-        let versions = load_data_file::<Vec<Version>, _, _>(
-            storage, version_file_path,
-        )
+        let versions = load_data_file::<Vec<Version>, _, _>(storage, version_file_path)
             .await
             .unwrap_or_default();
 
@@ -77,11 +75,10 @@ impl Project {
 
         if let Some(data_source) = &mut self.data_source {
             let data_source_status_file_path = format!("projects/{}/datasource.yaml", self.slug);
-            let data_source_status = load_data_file::<DataSourceStatus, _, _>(
-                storage, data_source_status_file_path,
-            )
-                .await
-                .unwrap_or_default();
+            let data_source_status =
+                load_data_file::<DataSourceStatus, _, _>(storage, data_source_status_file_path)
+                    .await
+                    .unwrap_or_default();
 
             data_source.status = Some(data_source_status);
         }
@@ -90,8 +87,8 @@ impl Project {
     }
 
     pub async fn persist_versions<S>(&self, storage: &S) -> anyhow::Result<()>
-        where
-            S: Storer,
+    where
+        S: Storer,
     {
         let Some(versions) = &self.versions else {
             return Ok(());
@@ -104,8 +101,8 @@ impl Project {
     }
 
     pub async fn persist_datasource<S>(&self, storage: &S) -> anyhow::Result<()>
-        where
-            S: Storer,
+    where
+        S: Storer,
     {
         let Some(data_source) = &self.data_source else {
             return Ok(());
@@ -121,7 +118,6 @@ impl Project {
         Ok(())
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -158,7 +154,6 @@ pub struct Dependency {
     pub breaking: Option<bool>,
     pub outdated: Option<bool>,
 }
-
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Alert {

@@ -1,10 +1,10 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+use crate::dependencies::update_dependent_projects;
 use crate::models::{Project, ProjectSlug};
 use crate::persistence::{load_data_file, Versioned};
 use crate::storage::Storage;
-use crate::dependencies::update_dependent_projects;
 
 #[derive(Debug)]
 pub struct AppState {
@@ -30,14 +30,15 @@ impl AppState {
             project.load_persistent_data(&storage).await?;
         }
 
-
         let mut app_state = Self {
             storage,
             projects: app_state.0,
         };
 
         // Update dependent projects dependencies status
-        let slugs = app_state.projects.keys()
+        let slugs = app_state
+            .projects
+            .keys()
             .map(|slug| slug.to_owned())
             .collect::<Vec<_>>();
         for slug in slugs {

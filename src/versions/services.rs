@@ -1,12 +1,12 @@
 use chrono::Utc;
 use sha2::{Digest, Sha256};
 
-use schemadoc_diff::core::DiffResult;
 use schemadoc_diff::checker::validate;
+use schemadoc_diff::core::DiffResult;
 use schemadoc_diff::schema_diff::HttpSchemaDiff;
 
-use crate::config::Config;
 use crate::app_state::AppState;
+use crate::config::Config;
 use crate::models::{ProjectSlug, Version};
 use crate::storage::{Storage, Storer};
 use crate::{alerts, dependencies, versions};
@@ -63,7 +63,6 @@ fn compare_versions_content(
 
     Ok(diff)
 }
-
 
 pub struct CreatedVersion {
     pub version: Option<Version>,
@@ -159,15 +158,12 @@ async fn create_version_inner(
 
     project.persist_versions(&app_state.storage).await?;
 
-    return Ok(
-        CreatedVersion {
-            diff: Some(diff),
-            version: Some(version),
-            src_version_id,
-        }
-    );
+    Ok(CreatedVersion {
+        diff: Some(diff),
+        version: Some(version),
+        src_version_id,
+    })
 }
-
 
 pub async fn create_version(
     config: &Config,
@@ -176,9 +172,7 @@ pub async fn create_version(
     message: Option<String>,
     content: &str,
 ) -> anyhow::Result<Option<Version>> {
-    let result = create_version_inner(
-        app_state, project_slug, message, content,
-    ).await?;
+    let result = create_version_inner(app_state, project_slug, message, content).await?;
 
     let Some(version) = result.version else {
         return Ok(None);
@@ -188,9 +182,8 @@ pub async fn create_version(
         return Ok(None);
     };
 
-    let src_projects_slugs = dependencies::update_dependent_projects(
-        app_state, project_slug,
-    ).await?;
+    let src_projects_slugs =
+        dependencies::update_dependent_projects(app_state, project_slug).await?;
 
     //handle alerts
     let project = app_state
@@ -198,14 +191,12 @@ pub async fn create_version(
         .get(project_slug)
         .expect("Project must not be removed during add version operation.");
 
-
     let validations = validate(&diff, &["*"]);
 
     // own alerts
     if project.alerts.is_some() {
-        let alerts = alerts::get_own_alerts_info(
-            config, project, version.id, &diff, &validations,
-        ).await?;
+        let alerts =
+            alerts::get_own_alerts_info(config, project, version.id, &diff, &validations).await?;
         for alert in alerts {
             println!("Send own alert: {}", alert.service);
             alerts::send_alert(alert).await?;
@@ -214,14 +205,21 @@ pub async fn create_version(
 
     // deps alerts
     if let Some(src_version_id) = result.src_version_id {
-        let dep_projects: Vec<_> = src_projects_slugs.iter().filter_map(|slug|
-            app_state.projects.get(slug)
-        ).collect();
-
+        let dep_projects: Vec<_> = src_projects_slugs
+            .iter()
+            .filter_map(|slug| app_state.projects.get(slug))
+            .collect();
 
         let alerts = alerts::get_deps_alerts_info(
-            config, project, src_version_id, version.id, dep_projects, &diff, &validations,
-        ).await?;
+            config,
+            project,
+            src_version_id,
+            version.id,
+            dep_projects,
+            &diff,
+            &validations,
+        )
+        .await?;
         for alert in alerts {
             println!("Send deps alert: {}", alert.service);
             alerts::send_alert(alert).await?;
