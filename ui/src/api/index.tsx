@@ -8,20 +8,16 @@ const instance = axios.create({
   timeout: 30000,
 });
 
-// instance.interceptors.request.use(
-//   function (config) {
-//     const token = localStorage.getItem("token");
-//     if (config.headers && token) {
-//       config.headers["Authorization"] = `Bearer ${token}`;
-//     }
-//     // Do something before request is sent
-//     return config;
-//   },
-//   function (error) {
-//     // Do something with request error
-//     return Promise.reject(error);
-//   }
-// );
+instance.interceptors.request.use(
+  function (config) {
+    // Do something before request is sent
+    return config;
+  },
+  function (error) {
+    // Do something with request error
+    return Promise.reject(error);
+  }
+);
 
 const api = {
   projects: projectsApi(instance),

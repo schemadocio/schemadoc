@@ -18,9 +18,9 @@ const CompareVersionsPage: React.FC<CompareVersionsPageProps> = ({}) => {
 
   return (
     <VersionCompare
-      project={project}
       sourceId={+sourceId}
       targetId={+targetId}
+      projectSlug={project.slug}
     />
   );
 };

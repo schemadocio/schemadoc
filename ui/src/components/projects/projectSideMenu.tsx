@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   BsList,
@@ -20,8 +20,11 @@ import {
 } from "@chakra-ui/react";
 import { Link, NavLink as RouterLink } from "react-router-dom";
 
-import { Project } from "./models";
+import { Dependency, Project } from "./models";
 import { humanizeDateTimeOffset } from "../datetime";
+
+import api from "../../api";
+import Loading from "../loading";
 
 interface ProjectSideMenuProps {
   project: Project;
@@ -64,10 +67,14 @@ const ProjectSideMenu: React.FC<ProjectSideMenuProps> = ({ project }) => {
           </Box>
         </Link>
 
-        <SideMenuItem icon={BsList} text="Versions" to="versions" />
+        {project.kind === "server" && (
+          <SideMenuItem icon={BsList} text="Versions" to="versions" />
+        )}
 
         <AlertsBlock project={project} />
-        <DataSourceBlock project={project} />
+        {project.kind === "server" && <DataSourceBlock project={project} />}
+        <DependenciesBlock project={project} />
+        <DependentBlock project={project} />
       </VStack>
 
       <Link to="/projects">
@@ -81,6 +88,144 @@ const ProjectSideMenu: React.FC<ProjectSideMenuProps> = ({ project }) => {
         </Text>
       </Link>
     </Flex>
+  );
+};
+
+interface DependenciesBlockProps {
+  project: Project;
+}
+
+const DependenciesBlock: React.FC<DependenciesBlockProps> = ({ project }) => {
+  if (!project.dependencies || project.dependencies.length === 0) {
+    return null;
+  }
+
+  return (
+    <SideMenuBlock title="Depends on">
+      <>
+        {project.dependencies.map((dependency) => {
+          const bgColor = dependency.breaking
+            ? "red.200"
+            : dependency.outdated
+            ? "orange.200"
+            : "transparent";
+
+          return (
+            <ChakraLink
+              as={Link}
+              key={dependency.project}
+              to={`/projects/${dependency.project}`}
+              _hover={{ textDecoration: "none", color: "#d0165a" }}
+            >
+              <Flex
+                my={1}
+                px={1}
+                borderRadius={5}
+                bgColor={bgColor}
+                alignItems="center"
+                key={dependency.project}
+              >
+                -
+                <Text
+                  px={1}
+                  as="span"
+                  isTruncated
+                  fontSize={14}
+                  fontWeight={500}
+                  textAlign="center"
+                  title={dependency.project}
+                >
+                  {dependency.project}
+                </Text>
+                <Text
+                  as="span"
+                  isTruncated
+                  fontSize={12}
+                  title={dependency.project}
+                >
+                  [{dependency.version}]
+                </Text>
+              </Flex>
+            </ChakraLink>
+          );
+        })}
+      </>
+    </SideMenuBlock>
+  );
+};
+
+interface DependentBlockProps {
+  project: Project;
+}
+
+const DependentBlock: React.FC<DependentBlockProps> = ({ project }) => {
+  const [dependents, setDependents] = useState<Dependency[] | null>(null);
+
+  useEffect(() => {
+    api.projects.dependents(project.slug).then(({ data }) => {
+      setDependents(data);
+    });
+  }, [project.slug]);
+
+  if (dependents === null) {
+    return <Loading />;
+  }
+
+  if (dependents.length === 0) {
+    return null;
+  }
+
+  return (
+    <SideMenuBlock title="Used by">
+      <>
+        {dependents.map((dependency) => {
+          const bgColor = dependency.breaking
+            ? "red.200"
+            : dependency.outdated
+            ? "orange.200"
+            : "transparent";
+
+          return (
+            <ChakraLink
+              as={Link}
+              key={dependency.project}
+              to={`/projects/${dependency.project}`}
+              _hover={{ textDecoration: "none", color: "#d0165a" }}
+            >
+              <Flex
+                my={1}
+                px={1}
+                borderRadius={5}
+                bgColor={bgColor}
+                alignItems="center"
+                key={dependency.project}
+              >
+                -
+                <Text
+                  px={1}
+                  as="span"
+                  isTruncated
+                  fontSize={14}
+                  fontWeight={500}
+                  textAlign="center"
+                  title={dependency.project}
+                >
+                  {dependency.project}
+                </Text>
+                <Text
+                  as="span"
+                  isTruncated
+                  fontSize={12}
+                  title={dependency.project}
+                >
+                  [{dependency.version}]
+                </Text>
+              </Flex>
+            </ChakraLink>
+          );
+        })}
+      </>
+    </SideMenuBlock>
   );
 };
 
@@ -119,7 +264,7 @@ const AlertsBlock: React.FC<AlertsBlockProps> = ({ project }) => {
                 {alert.name}
               </Text>
 
-              {alert.kind === "all-breaking" && (
+              {alert.kind === "breaking" && (
                 <BsAsterisk
                   title="Only breaking changes reported"
                   color="red"

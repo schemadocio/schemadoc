@@ -37,13 +37,13 @@ export const VersionView: React.FC<VersionViewProps> = ({
     api.versions
       .get(project.slug, versionId)
       .then(({ data }) => data && setVersion(data));
-  }, [project, versionId]);
+  }, [project.slug, versionId]);
 
   useEffect(() => {
     api.versions.getDiff(project.slug, versionId).then(({ data }) => {
       setDiff(data);
     });
-  }, [versionId]);
+  }, [versionId, project.slug]);
 
   if (!diff) {
     return <Loading text="diff" />;

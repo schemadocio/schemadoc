@@ -5,12 +5,11 @@ import Loading from "../loading";
 import VersionMeta from "./versionMeta";
 import { HttpSchemaDiff } from "../http-schema/models";
 import { DiffResultIs } from "../http-schema/common";
-import { Project } from "../projects/models";
 
 interface VersionCompareProps {
-  project: Project;
   sourceId: number;
   targetId: number;
+  projectSlug: string;
   allowSame?: boolean;
 
   focusPath?: string;
@@ -20,9 +19,9 @@ interface VersionCompareProps {
 }
 
 export const VersionCompare: React.FC<VersionCompareProps> = ({
-  project,
   sourceId,
   targetId,
+  projectSlug,
   allowSame = false,
   ...options
 }) => {
@@ -34,9 +33,9 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
     }
 
     api.versions
-      .compare(project.slug, sourceId, targetId)
+      .compare(projectSlug, sourceId, targetId)
       .then(({ data }) => setDiff(data));
-  }, [project, sourceId, targetId, allowSame]);
+  }, [projectSlug, sourceId, targetId, allowSame]);
 
   if (!diff) {
     return <Loading text="custom diff" />;

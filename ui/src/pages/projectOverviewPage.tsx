@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import ProjectContext from "../components/projects/projectContext";
-import ProjectOverviewAPI from "../components/projects/projectOverviewApi";
+import ProjectOverviewServer from "../components/projects/projectOverviewServer";
+import ProjectOverviewClient from "../components/projects/projectOverviewClient";
 
 interface ProjectOverviewPageProps {}
 
@@ -10,7 +11,10 @@ const ProjectOverviewPage: React.FC<ProjectOverviewPageProps> = () => {
     return null;
   }
 
-  return <ProjectOverviewAPI project={project} />;
+  if (project.kind === "server") {
+    return <ProjectOverviewServer key={project.slug} project={project} />;
+  }
+  return <ProjectOverviewClient key={project.slug} project={project} />;
 };
 
 export default ProjectOverviewPage;

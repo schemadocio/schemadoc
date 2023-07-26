@@ -1,10 +1,12 @@
 export interface Project {
   slug: string;
   name: string;
+  kind: "server" | "client";
   description: string;
 
   alerts: Alert[] | null;
   dataSource: DataSource | null;
+  dependencies: Dependency[] | null;
 }
 
 export interface Alert {
@@ -15,7 +17,14 @@ export interface Alert {
 
   source: "own" | "deps";
 
-  kind: "all" | "all-breaking";
+  kind: "all" | "breaking";
+}
+
+export interface Dependency {
+  project: string;
+  version: number;
+  outdated: boolean;
+  breaking: boolean;
 }
 
 export interface DataSourceStatus {
