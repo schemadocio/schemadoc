@@ -1,7 +1,4 @@
-use crate::models::{
-    Alert, AlertKind, AlertSource, DataSource, DataSourceSource, DataSourceStatus, Project,
-    ProjectSlug, Version,
-};
+use crate::models::{Alert, AlertKind, AlertSource, DataSource, DataSourceSource, DataSourceStatus, Dependency, Project, ProjectSlug, Version};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
@@ -98,12 +95,34 @@ impl<'s> From<&'s DataSource> for DataSourceOut<'s> {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DependencyOut<'s> {
+    pub project: &'s str,
+    pub version: u32,
+    pub outdated: Option<bool>,
+    pub breaking: Option<bool>,
+}
+
+impl<'s> From<&'s Dependency> for DependencyOut<'s> {
+    fn from(dependency: &'s Dependency) -> DependencyOut<'s> {
+        Self {
+            version: dependency.version,
+            project: dependency.project.as_str(),
+            outdated: dependency.outdated.clone(),
+            breaking: dependency.breaking.clone(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProjectOut<'s> {
     pub slug: &'s ProjectSlug,
     pub name: &'s str,
-    pub description: &'s str,
+    pub kind: &'static str,
+    pub description: Option<&'s str>,
     pub alerts: Option<Vec<AlertOut<'s>>>,
     pub data_source: Option<DataSourceOut<'s>>,
+    pub dependencies: Option<Vec<DependencyOut<'s>>>,
 }
 
 impl<'s> From<&'s Project> for ProjectOut<'s> {
@@ -111,11 +130,17 @@ impl<'s> From<&'s Project> for ProjectOut<'s> {
         Self {
             slug: &project.slug,
             name: &project.name,
-            description: &project.description,
+            kind: &project.kind.as_str(),
+            description: project.description.as_ref().map(|d| d.as_str()),
             alerts: project
                 .alerts
                 .as_ref()
                 .map(|v| v.iter().map(AlertOut::from).collect()),
+            dependencies: project
+                .dependencies
+                .as_ref()
+                .map(|v| v.iter().map(DependencyOut::from).collect()),
+
             data_source: project.data_source.as_ref().map(DataSourceOut::from),
         }
     }

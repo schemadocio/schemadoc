@@ -4,9 +4,9 @@ use serde::Deserialize;
 use std::ops::DerefMut;
 
 use crate::config::Config;
-use crate::models::ProjectSlug;
 use crate::projects;
-use crate::web::schema::ProjectOut;
+use crate::models::{Dependency, ProjectSlug};
+use crate::web::schema::{DependencyOut, ProjectOut};
 use crate::web::utils::json_response;
 use crate::web::AppStateType;
 
@@ -16,7 +16,9 @@ async fn list_projects_endpoint(state: web::Data<AppStateType>) -> impl Responde
 
     let projects = state.projects.values().collect::<Vec<_>>();
 
-    let out: Vec<_> = projects.into_iter().map(ProjectOut::from).collect();
+    let out: Vec<_> = projects.into_iter()
+        .map(ProjectOut::from)
+        .collect();
 
     json_response(StatusCode::OK, &out)
 }
@@ -30,6 +32,37 @@ async fn get_project_by_id_endpoint(
     let project = state.projects.get(&path.into_inner());
 
     json_response(StatusCode::OK, &project.map(ProjectOut::from))
+}
+
+
+#[get("/{slug}/dependents")]
+async fn get_dependents_project_by_id_endpoint(
+    path: web::Path<ProjectSlug>,
+    state: web::Data<AppStateType>,
+) -> Option<impl Responder> {
+    let state = state.read().await;
+
+    let project = state.projects.get(&path.into_inner())?;
+
+    let dependents = state.projects.values().filter_map(|p| {
+        p.dependencies.as_ref().map(
+            |deps| deps.iter()
+                .filter(|d| d.project == project.slug)
+                .map(
+                    |d| Dependency {
+                        project: p.slug.clone(),
+                        version: d.version,
+                        breaking: d.breaking,
+                        outdated: d.outdated,
+                    }
+                )
+        )
+    }).flatten()
+        .collect::<Vec<_>>();
+
+    let body: Vec<_> = dependents.iter().map(DependencyOut::from).collect();
+
+    Some(json_response(StatusCode::OK, &body))
 }
 
 #[derive(Deserialize)]
@@ -60,4 +93,5 @@ pub fn get_projects_api_scope() -> actix_web::Scope {
         .service(list_projects_endpoint)
         .service(get_project_by_id_endpoint)
         .service(pull_project_datasource_endpoint)
+        .service(get_dependents_project_by_id_endpoint)
 }

@@ -52,25 +52,16 @@ impl From<Slug> for ProjectSlug {
 pub struct Project {
     pub slug: ProjectSlug,
     pub name: String,
-    pub description: String,
+    pub kind: ProjectKind,
+    pub description: Option<String>,
 
     pub alerts: Option<Vec<Alert>>,
     pub versions: Option<Vec<Version>>,
     pub data_source: Option<DataSource>,
+    pub dependencies: Option<Vec<Dependency>>,
 }
 
 impl Project {
-    pub fn new(slug: ProjectSlug, name: String, description: String) -> Self {
-        Self {
-            slug,
-            name,
-            description,
-            alerts: None,
-            versions: None,
-            data_source: None,
-        }
-    }
-
     pub async fn load_persistent_data<S>(&mut self, storage: &S) -> anyhow::Result<()>
         where
             S: Storer,
@@ -85,9 +76,9 @@ impl Project {
         self.versions = Some(versions);
 
         if let Some(data_source) = &mut self.data_source {
-            let datasource_status_file_path = format!("projects/{}/datasource.yaml", self.slug);
+            let data_source_status_file_path = format!("projects/{}/datasource.yaml", self.slug);
             let data_source_status = load_data_file::<DataSourceStatus, _, _>(
-                storage, datasource_status_file_path,
+                storage, data_source_status_file_path,
             )
                 .await
                 .unwrap_or_default();
@@ -131,6 +122,44 @@ impl Project {
     }
 }
 
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ProjectKind {
+    Server,
+    Client,
+}
+
+impl ProjectKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Server => "server",
+            Self::Client => "client",
+        }
+    }
+}
+
+impl ProjectKind {
+    pub fn is_server(&self) -> bool {
+        matches!(self, Self::Server)
+    }
+
+    pub fn is_client(&self) -> bool {
+        matches!(self, Self::Client)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Dependency {
+    pub project: ProjectSlug,
+    pub version: u32,
+
+    // cached fields
+    pub breaking: Option<bool>,
+    pub outdated: Option<bool>,
+}
+
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Alert {
     pub name: String,
@@ -148,8 +177,8 @@ pub enum AlertKind {
     #[serde(rename = "all")]
     All,
     #[default]
-    #[serde(rename = "all-breaking")]
-    AllBreaking,
+    #[serde(rename = "breaking")]
+    Breaking,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -194,6 +223,7 @@ impl Versioned for Vec<Version> {
 pub struct DataSource {
     pub name: String,
     pub source: DataSourceSource,
+    // persisted field
     pub status: Option<DataSourceStatus>,
 }
 

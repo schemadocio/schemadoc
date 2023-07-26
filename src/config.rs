@@ -37,10 +37,17 @@ impl Config {
         }
     }
 
-    pub(crate) fn url_to_version(&self, project_slug: &ProjectSlug, version_id: u32) -> String {
+    pub(crate) fn url_to_version_server(&self, project_slug: &ProjectSlug, version_id: u32) -> String {
         format!(
             "{}/projects/{}/versions/{}",
             self.frontend_origin, project_slug, version_id
+        )
+    }
+
+    pub(crate) fn url_to_version_client(&self, project_slug: &ProjectSlug, dep: &ProjectSlug, src_version_id: u32, tgt_version_id: u32) -> String {
+        format!(
+            "{}/projects/{}/overview?dep={}&src={}&tgt={}",
+            self.frontend_origin, project_slug, dep, src_version_id, tgt_version_id
         )
     }
 }

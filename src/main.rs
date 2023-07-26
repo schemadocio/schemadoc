@@ -7,6 +7,7 @@ pub mod projects;
 pub mod scheduler;
 pub mod storage;
 pub mod versions;
+pub mod dependencies;
 pub mod web;
 
 use clap::{Parser, Subcommand};
@@ -51,11 +52,11 @@ async fn main() -> anyhow::Result<()> {
     match cli.command.unwrap() {
         Commands::Serve { host, port, schedule } => {
             tokio::select! {
-                _ = web::serve(&host, port) => {
-                    println!("Server exited")
+                r = web::serve(&host, port) => {
+                    println!("Server exited: {:?}", r)
                 }
-                _ = scheduler::schedule("localhost", port, 1, false), if schedule => {
-                    println!("Scheduler exited")
+                r = scheduler::schedule("localhost", port, 1, false), if schedule => {
+                    println!("Scheduler exited: {:?}", r)
                 }
             }
             Ok(())

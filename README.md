@@ -21,7 +21,7 @@ identify breaking changes.
 - **Alerts**: You can configure alerts to receive notifications about schema changes. SchemaDoc supports sending summary
   alerts to Slack or Google Chat. There are two kinds of alerts available:
     - **all**: Send an alert for any change detected in the schema.
-    - **all-breaking**: Send an alert only if there are breaking changes in the schema.
+    - **breaking**: Send an alert only if there are breaking changes in the schema.
 - **File-based Storage**: SchemaDoc does not require a database. It stores all data in files, making it easy to set up and
   deploy.
 
@@ -39,7 +39,7 @@ data:
     description: empty
     alerts:
       - name: Slack breaking
-        kind: all-breaking
+        kind: breaking
         source: own
         is_active: true
         service: Slack
