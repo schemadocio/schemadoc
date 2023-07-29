@@ -6,7 +6,7 @@ use schemadoc_diff::exporters::{Exporter, Markdown};
 use schemadoc_diff::schema_diff::HttpSchemaDiff;
 
 use crate::alerts::{google_chats, slack};
-use crate::config::Config;
+use crate::settings::Settings;
 use crate::models::{AlertKind, Project};
 
 pub struct AlertInfo<'s> {
@@ -16,7 +16,7 @@ pub struct AlertInfo<'s> {
 }
 
 pub async fn get_own_alerts_info<'s>(
-    config: &Config,
+    settings: &Settings,
     project: &'s Project,
     tgt_version_id: u32,
     diff: &HttpSchemaDiff,
@@ -26,7 +26,7 @@ pub async fn get_own_alerts_info<'s>(
         return Ok(vec![]);
     };
 
-    let version_url = config.url_to_version_server(&project.slug, tgt_version_id);
+    let version_url = settings.url_to_version_server(&project.slug, tgt_version_id);
 
     let mut info = Vec::new();
 
@@ -69,7 +69,7 @@ pub async fn get_own_alerts_info<'s>(
 }
 
 pub async fn get_deps_alerts_info<'s>(
-    config: &Config,
+    settings: &Settings,
     project: &'s Project,
     src_version_id: u32,
     tgt_version_id: u32,
@@ -81,7 +81,7 @@ pub async fn get_deps_alerts_info<'s>(
 
     for dep in dep_projects {
         let version_url =
-            config.url_to_version_client(&dep.slug, &project.slug, src_version_id, tgt_version_id);
+            settings.url_to_version_client(&dep.slug, &project.slug, src_version_id, tgt_version_id);
 
         let Some(alerts) = dep.alerts.as_ref() else { continue; };
 

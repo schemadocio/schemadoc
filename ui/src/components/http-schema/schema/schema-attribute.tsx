@@ -112,7 +112,8 @@ const SchemaAttributeValue: React.FC<SchemaAttributeValueProps> = ({
           let backgroundColor = undefined;
 
           if (typeof item === "object") {
-            value = JSON.stringify(valueOf(item) || item, null, 2);
+            let val = valueOf(item);
+            value = JSON.stringify(val === null ? item : val, null, 2);
             backgroundColor = getBgColor(item, attributePrimary);
           }
 

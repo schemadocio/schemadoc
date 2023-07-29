@@ -1,4 +1,4 @@
-use crate::persistence::{load_data_file, persist_data_file, Versioned};
+use crate::persistence::{load_data_file, persist_data_file, PersistentDataFile, Versioned};
 use crate::storage::Storer;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -63,11 +63,11 @@ pub struct Project {
 
 impl Project {
     pub async fn load_persistent_data<S>(&mut self, storage: &S) -> anyhow::Result<()>
-    where
-        S: Storer,
+        where
+            S: Storer,
     {
         let version_file_path = format!("projects/{}/versions.yaml", self.slug);
-        let versions = load_data_file::<Vec<Version>, _, _>(storage, version_file_path)
+        let versions = load_data_file::<Vec<Version>, _, _, PersistentDataFile<_>>(storage, version_file_path)
             .await
             .unwrap_or_default();
 
@@ -76,7 +76,7 @@ impl Project {
         if let Some(data_source) = &mut self.data_source {
             let data_source_status_file_path = format!("projects/{}/datasource.yaml", self.slug);
             let data_source_status =
-                load_data_file::<DataSourceStatus, _, _>(storage, data_source_status_file_path)
+                load_data_file::<DataSourceStatus, _, _, PersistentDataFile<_>>(storage, data_source_status_file_path)
                     .await
                     .unwrap_or_default();
 
@@ -87,22 +87,22 @@ impl Project {
     }
 
     pub async fn persist_versions<S>(&self, storage: &S) -> anyhow::Result<()>
-    where
-        S: Storer,
+        where
+            S: Storer,
     {
         let Some(versions) = &self.versions else {
             return Ok(());
         };
 
         let path = format!("projects/{}/versions.yaml", self.slug);
-        persist_data_file::<Vec<Version>, _, _>(storage, path, versions).await?;
+        persist_data_file::<Vec<Version>, _, _, PersistentDataFile<_>>(storage, path, versions).await?;
 
         Ok(())
     }
 
     pub async fn persist_datasource<S>(&self, storage: &S) -> anyhow::Result<()>
-    where
-        S: Storer,
+        where
+            S: Storer,
     {
         let Some(data_source) = &self.data_source else {
             return Ok(());
@@ -113,7 +113,7 @@ impl Project {
         };
 
         let path = format!("projects/{}/datasource.yaml", self.slug);
-        persist_data_file::<DataSourceStatus, _, _>(storage, path, data_source_status).await?;
+        persist_data_file::<DataSourceStatus, _, _, PersistentDataFile<_>>(storage, path, data_source_status).await?;
 
         Ok(())
     }

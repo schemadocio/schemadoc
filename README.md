@@ -22,8 +22,8 @@ identify breaking changes.
   identify modifications that may cause compatibility issues with existing clients.
 - **Alerts**: You can configure alerts to receive notifications about schema changes. SchemaDoc supports sending summary
   alerts to Slack or Google Chat. There are two kinds of alerts available:
-    - **all**: Send an alert for any change detected in the schema.
-    - **breaking**: Send an alert only if there are breaking changes in the schema.
+  - **all**: Send an alert for any change detected in the schema.
+  - **breaking**: Send an alert only if there are breaking changes in the schema.
 - **File-based Storage**: SchemaDoc does not require a database. It stores all data in files, making it easy to set up
   and
   deploy.
@@ -37,11 +37,9 @@ The configuration file for SchemaDoc (schemadoc.yaml) follows the structure belo
 ```yaml
 version: "0.1"
 
-data:
+projects:
   stripe:
-    slug: stripe
     name: Strip API
-    kind: server
     description: empty
     alerts:
       - name: Slack breaking
@@ -57,8 +55,13 @@ data:
       source: !Url { url: https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json }
 
     dependencies:
-      - project: petstore # Change me or remove
-        version: 0
+      petstore: 0 # Change me or remove
+
+  stripe-python-client:
+    name: Stripe Python Client
+    kind: client
+    dependencies:
+      stripe: 0
 ```
 
 In this configuration file, you can define multiple projects under the data section. Each project has a unique slug,

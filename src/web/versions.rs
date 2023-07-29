@@ -3,7 +3,7 @@ use actix_web::web::Bytes;
 use actix_web::{error, get, post, web, HttpRequest, Responder};
 use std::ops::DerefMut;
 
-use crate::config::Config;
+use crate::settings::Settings;
 use crate::models::ProjectSlug;
 use crate::storage::Storer;
 use crate::versions::{crud, services};
@@ -33,7 +33,7 @@ async fn add_version_endpoint(
     bytes: Bytes,
     req: HttpRequest,
     state: web::Data<AppStateType>,
-    config: web::Data<Config>,
+    settings: web::Data<Settings>,
 ) -> Result<impl Responder, error::Error> {
     let mut state = state.write().await;
 
@@ -46,7 +46,7 @@ async fn add_version_endpoint(
 
     let content = String::from_utf8_lossy(&bytes);
 
-    let version = services::create_version(&config, state.deref_mut(), &path, message, &content)
+    let version = services::create_version(&settings, state.deref_mut(), &path, message, &content)
         .await
         .map_err(|e| error::ErrorInternalServerError(format!("Error creating version: {}", e)))?;
 

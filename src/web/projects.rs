@@ -3,7 +3,7 @@ use actix_web::{error, get, post, web, Responder};
 use serde::Deserialize;
 use std::ops::DerefMut;
 
-use crate::config::Config;
+use crate::settings::Settings;
 use crate::models::{Dependency, ProjectSlug};
 use crate::projects;
 use crate::web::schema::{DependencyOut, ProjectOut};
@@ -72,7 +72,7 @@ struct PullQueryParams {
 #[post("/{slug}/pull")]
 async fn pull_project_datasource_endpoint(
     path: web::Path<ProjectSlug>,
-    config: web::Data<Config>,
+    settings: web::Data<Settings>,
     state: web::Data<AppStateType>,
     query: web::Query<PullQueryParams>,
 ) -> Result<impl Responder, error::Error> {
@@ -80,7 +80,7 @@ async fn pull_project_datasource_endpoint(
 
     let state = lock.deref_mut();
 
-    projects::pull_project_datasource(config.as_ref(), state, path.as_ref(), query.force)
+    projects::pull_project_datasource(settings.as_ref(), state, path.as_ref(), query.force)
         .await
         .map_err(error::ErrorInternalServerError)?;
 

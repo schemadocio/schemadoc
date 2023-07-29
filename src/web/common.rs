@@ -11,7 +11,7 @@ async fn invalidate_app_state_endpoint(
 
     let state = lock.deref_mut();
 
-    *state = AppState::read(state.storage.clone())
+    *state = AppState::read(state.storage.clone(), state.config_storage.clone())
         .await
         .map_err(|_| error::ErrorInternalServerError("Error reading store"))?;
 

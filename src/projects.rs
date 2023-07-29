@@ -1,12 +1,12 @@
 use crate::app_state::AppState;
-use crate::config::Config;
+use crate::settings::Settings;
 use crate::models::{DataSourceSource, ProjectSlug};
 use crate::versions;
 use anyhow::anyhow;
 use chrono::{Duration, Utc};
 
 pub async fn pull_project_datasource(
-    config: &Config,
+    settings: &Settings,
     app_state: &mut AppState,
     project_slug: &ProjectSlug,
     force: bool,
@@ -62,8 +62,8 @@ pub async fn pull_project_datasource(
         };
 
         if content.is_none()
-            && config.pull_disable_after_attempt != 0
-            && config.pull_disable_after_attempt <= status.pull_attempt
+            && settings.pull_disable_after_attempt != 0
+            && settings.pull_disable_after_attempt <= status.pull_attempt
         {
             status.pull_enabled = false;
         }
@@ -74,7 +74,7 @@ pub async fn pull_project_datasource(
     };
 
     if let Some(content) = content {
-        versions::services::create_version(config, app_state, project_slug, None, &content).await?;
+        versions::services::create_version(settings, app_state, project_slug, None, &content).await?;
     }
 
     Ok(())

@@ -6,7 +6,7 @@ use schemadoc_diff::core::DiffResult;
 use schemadoc_diff::schema_diff::HttpSchemaDiff;
 
 use crate::app_state::AppState;
-use crate::config::Config;
+use crate::settings::Settings;
 use crate::models::{ProjectSlug, Version};
 use crate::storage::{Storage, Storer};
 use crate::{alerts, dependencies, versions};
@@ -166,7 +166,7 @@ async fn create_version_inner(
 }
 
 pub async fn create_version(
-    config: &Config,
+    settings: &Settings,
     app_state: &mut AppState,
     project_slug: &ProjectSlug,
     message: Option<String>,
@@ -196,7 +196,7 @@ pub async fn create_version(
     // own alerts
     if project.alerts.is_some() {
         let alerts =
-            alerts::get_own_alerts_info(config, project, version.id, &diff, &validations).await?;
+            alerts::get_own_alerts_info(settings, project, version.id, &diff, &validations).await?;
         for alert in alerts {
             println!("Send own alert: {}", alert.service);
             alerts::send_alert(alert).await?;
@@ -211,7 +211,7 @@ pub async fn create_version(
             .collect();
 
         let alerts = alerts::get_deps_alerts_info(
-            config,
+            settings,
             project,
             src_version_id,
             version.id,

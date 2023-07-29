@@ -52,9 +52,8 @@ export const VecProperty: React.FC<VecPropertyProps> = ({
     );
 
     return (
-      <Box p={1} bgColor={backgroundColor} borderRadius={3}>
+      <Box key={idx} p={1} bgColor={backgroundColor} borderRadius={3}>
         <Schema
-          key={idx}
           open={false}
           schemaName={`${idx}`}
           renderDepth={renderDepth + 1}

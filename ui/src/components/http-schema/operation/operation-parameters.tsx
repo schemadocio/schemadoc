@@ -193,7 +193,7 @@ export const OperationParameter: React.FC<OperationParameterProps> = ({
         </Text>
       </Td>
       <Td verticalAlign="initial">
-        <Text ml={1}>
+        <Text ml={1} whiteSpace="pre-wrap">
           {parameter.description && valueOf(parameter.description)}
         </Text>
         <Box mt={1} ml={1} fontSize={12}>

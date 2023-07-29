@@ -2,10 +2,13 @@ use anyhow::bail;
 use serde::Deserialize;
 use std::time::Duration;
 
+use crate::models::ProjectKind;
+
 #[derive(Debug, Deserialize)]
 pub struct ProjectBody {
     pub name: String,
     pub slug: String,
+    pub kind: ProjectKind,
 }
 
 pub async fn schedule(host: &str, port: u16, interval: u64, force: bool) {
@@ -32,6 +35,10 @@ async fn pull(host: &str, port: u16, force: bool) -> anyhow::Result<()> {
     let mut projects = response.json::<Vec<ProjectBody>>().await?;
 
     for project in projects.iter_mut() {
+        if project.kind.is_client() {
+            continue;
+        }
+
         let url = format!("http://{host}:{port}/v1/projects/{}/pull", project.slug);
 
         let response = client.post(url).query(&[("force", force)]).send().await;

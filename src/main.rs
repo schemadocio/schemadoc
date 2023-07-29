@@ -1,6 +1,6 @@
 pub mod alerts;
 pub mod app_state;
-pub mod config;
+pub mod settings;
 pub mod dependencies;
 pub mod models;
 pub mod persistence;

@@ -18,28 +18,49 @@ pub trait Versioned {
     // fn migrations() -> &'static HashMap<&'static str, fn(Value) -> (Value, &'static str)>;
 }
 
+pub trait PersistentData<T> {
+    fn version(&self) -> &str;
+    fn data(self) -> T;
+    fn new(version: impl Into<String>, data: T) -> Self;
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct PersistentDataFile<T> {
     pub version: String,
     pub data: T,
 }
 
-pub async fn persist_data_file<T, S, P>(
+impl<T> PersistentData<T> for PersistentDataFile<T> {
+    fn version(&self) -> &str {
+        &self.version
+    }
+
+    fn data(self) -> T {
+        self.data
+    }
+
+    fn new(version: impl Into<String>, data: T) -> Self {
+        PersistentDataFile {
+            version: version.into(),
+            data,
+        }
+    }
+}
+
+pub async fn persist_data_file<'s, T, S, P, C>(
     storage: &S,
     path: P,
-    state: &T,
+    state: &'s T,
 ) -> Result<(), PersistenceError>
-where
-    T: Versioned + Serialize,
-    S: Storer,
-    P: Into<PathBuf>,
+    where
+        T: Versioned,
+        S: Storer,
+        P: Into<PathBuf>,
+        C: PersistentData<&'s T> + Serialize
 {
     let path = path.into();
 
-    let file = PersistentDataFile {
-        version: T::latest().to_string(),
-        data: state,
-    };
+    let file = C::new(T::latest(), state);
 
     let data = serde_yaml::to_string(&file)?;
 
@@ -48,18 +69,19 @@ where
     Ok(())
 }
 
-pub async fn load_data_file<T, S, P>(storage: &S, path: P) -> Result<T, PersistenceError>
-where
-    T: Versioned + Default + for<'a> Deserialize<'a>,
-    S: Storer,
-    P: Into<PathBuf>,
+pub async fn load_data_file<T, S, P, C>(storage: &S, path: P) -> Result<T, PersistenceError>
+    where
+        T: Versioned + Default, // + for<'a> Deserialize<'a>,
+        S: Storer,
+        P: Into<PathBuf>,
+        C: PersistentData<T> + for<'a> Deserialize<'a>
 {
     let path = path.into();
 
     let state = if storage.exists(&path).await? {
         let data = storage.read_file(&path).await?;
-        let state: PersistentDataFile<T> = serde_yaml::from_slice(data.as_slice())?;
-        state.data
+        let state: C = serde_yaml::from_slice(data.as_slice())?;
+        state.data()
     } else {
         Default::default()
     };
