@@ -3,7 +3,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::dependencies::update_dependent_projects;
-use crate::models::{Alert, DataSource, Dependency, Project, ProjectKind, ProjectSlug};
+use crate::models::{Alert, DataSource, Dependency, Link, Project, ProjectKind, ProjectSlug};
 use crate::persistence::{load_data_file, PersistentData, Versioned};
 use crate::settings::Settings;
 use crate::storage::{LocalStorage, Storage};
@@ -69,6 +69,7 @@ impl AppState {
                     versions: None,
                     slug: slug.clone(),
                     name: config.name,
+                    links: config.links,
                     alerts: config.alerts,
                     description: config.description,
                     data_source: config.data_source,
@@ -116,6 +117,8 @@ pub struct ProjectConfig {
     pub name: String,
     pub kind: Option<ProjectKind>,
     pub description: Option<String>,
+
+    pub links: Option<Vec<Link>>,
 
     pub alerts: Option<Vec<Alert>>,
     pub data_source: Option<DataSource>,

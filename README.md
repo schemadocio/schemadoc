@@ -49,18 +49,17 @@ projects:
         service: Slack
         service_config:
           hook: https://hooks.slack.com/services/ABCDEFGHIJK/123456789/A1B2C3D4e5f6
-
     data_source:
       name: Stripe Github raw
       source: !Url { url: https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json }
-
-    dependencies:
-      petstore: 0 # Change me or remove
+    links:
+      - name: API Reference
+        url: https://stripe.com/docs/api
 
   stripe-python-client:
     name: Stripe Python Client
     kind: client
-    dependencies:
+    dependencies: # Could be set for both kind=`server` and `client`
       stripe: 0
 ```
 

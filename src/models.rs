@@ -55,6 +55,8 @@ pub struct Project {
     pub kind: ProjectKind,
     pub description: Option<String>,
 
+    pub links: Option<Vec<Link>>,
+
     pub alerts: Option<Vec<Alert>>,
     pub versions: Option<Vec<Version>>,
     pub data_source: Option<DataSource>,
@@ -255,4 +257,11 @@ impl Versioned for DataSourceStatus {
     fn latest() -> &'static str {
         "0.1"
     }
+}
+
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Link {
+    pub name: String,
+    pub url: String,
 }

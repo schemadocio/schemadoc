@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import {
   BsList,
+  BsLink45Deg,
   BsSlack,
   BsGoogle,
   BsAsterisk,
@@ -70,6 +71,16 @@ const ProjectSideMenu: React.FC<ProjectSideMenuProps> = ({ project }) => {
         {project.kind === "server" && (
           <SideMenuItem icon={BsList} text="Versions" to="versions" />
         )}
+
+        {project.links &&
+          project.links.map((link) => (
+            <SideMenuItem
+              icon={BsLink45Deg}
+              text={link.name}
+              to={link.url}
+              target="_blank"
+            />
+          ))}
 
         <AlertsBlock project={project} />
         {project.kind === "server" && <DataSourceBlock project={project} />}
@@ -363,9 +374,11 @@ interface SideMenuItemProps {
   text: string;
   icon: any;
   to: string;
+  target?: string;
 }
 
 const SideMenuItem: React.FC<SideMenuItemProps> = ({
+  target,
   text,
   icon,
   to,
@@ -373,6 +386,7 @@ const SideMenuItem: React.FC<SideMenuItemProps> = ({
   return (
     <RouterLink
       to={to}
+      target={target}
       className={({ isActive }) => (isActive ? "active" : "inactive")}
     >
       {({ isActive }) => (

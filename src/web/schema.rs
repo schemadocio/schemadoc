@@ -1,7 +1,4 @@
-use crate::models::{
-    Alert, AlertKind, AlertSource, DataSource, DataSourceSource, DataSourceStatus, Dependency,
-    Project, ProjectSlug, Version,
-};
+use crate::models::{Alert, AlertKind, AlertSource, DataSource, DataSourceSource, DataSourceStatus, Dependency, Link, Project, ProjectSlug, Version};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
@@ -123,6 +120,9 @@ pub struct ProjectOut<'s> {
     pub name: &'s str,
     pub kind: &'static str,
     pub description: Option<&'s str>,
+
+    pub links: Option<&'s Vec<Link>>,
+
     pub alerts: Option<Vec<AlertOut<'s>>>,
     pub data_source: Option<DataSourceOut<'s>>,
     pub dependencies: Option<Vec<DependencyOut<'s>>>,
@@ -135,6 +135,7 @@ impl<'s> From<&'s Project> for ProjectOut<'s> {
             name: &project.name,
             kind: project.kind.as_str(),
             description: project.description.as_deref(),
+            links: project.links.as_ref(),
             alerts: project
                 .alerts
                 .as_ref()

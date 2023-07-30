@@ -4,9 +4,16 @@ export interface Project {
   kind: "server" | "client";
   description: string;
 
+  links: Link[] | null;
+
   alerts: Alert[] | null;
   dataSource: DataSource | null;
   dependencies: Dependency[] | null;
+}
+
+export interface Link {
+  name: string;
+  url: string;
 }
 
 export interface Alert {
