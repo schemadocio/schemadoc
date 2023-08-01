@@ -5,6 +5,7 @@ import Loading from "../loading";
 import VersionMeta from "./versionMeta";
 import { HttpSchemaDiff } from "../http-schema/models";
 import { DiffResultIs } from "../http-schema/common";
+import { VersionStatistics } from "./models";
 
 interface VersionCompareProps {
   sourceId: number;
@@ -25,7 +26,10 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
   allowSame = false,
   ...options
 }) => {
-  const [diff, setDiff] = useState<HttpSchemaDiff | null>(null);
+  const [diff, setDiff] = useState<{
+    diff: HttpSchemaDiff;
+    statistics: VersionStatistics;
+  } | null>(null);
 
   useEffect(() => {
     if (sourceId === targetId && !allowSame) {
@@ -41,5 +45,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
     return <Loading text="custom diff" />;
   }
 
-  return <VersionMeta diff={diff} {...options} />;
+  return (
+    <VersionMeta diff={diff.diff} statistics={diff.statistics} {...options} />
+  );
 };

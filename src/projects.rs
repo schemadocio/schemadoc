@@ -74,7 +74,8 @@ pub async fn pull_project_datasource(
     };
 
     if let Some(content) = content {
-        versions::services::create_version(settings, app_state, project_slug, None, &content).await?;
+        let message = Some("Pull from datasource".to_owned());
+        versions::services::create_version(settings, app_state, project_slug, message, &content).await?;
     }
 
     Ok(())

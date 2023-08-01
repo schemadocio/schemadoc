@@ -1,9 +1,11 @@
-use crate::persistence::{load_data_file, persist_data_file, PersistentDataFile, Versioned};
-use crate::storage::Storer;
+use std::fmt;
+use serde_yaml::Value;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_yaml::Value;
-use std::fmt;
+
+use crate::storage::Storer;
+use crate::versions::statistics::DiffStatistics;
+use crate::persistence::{load_data_file, persist_data_file, PersistentDataFile, Versioned};
 
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Slug(String);
@@ -206,6 +208,8 @@ pub struct Version {
 
     pub diff_file_path: String,
     pub diff_file_version: String,
+
+    pub statistics: DiffStatistics,
 
     pub created_at: DateTime<Utc>,
 }

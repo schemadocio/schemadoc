@@ -1,12 +1,13 @@
 use actix_web::http::StatusCode;
 use actix_web::web::Bytes;
-use actix_web::{error, get, post, web, HttpRequest, Responder};
+use actix_web::{error, get, post, web, HttpRequest, Responder, HttpResponse};
 use std::ops::DerefMut;
+use schemadoc_diff::schema_diff::HttpSchemaDiff;
 
 use crate::settings::Settings;
 use crate::models::ProjectSlug;
 use crate::storage::Storer;
-use crate::versions::{crud, services};
+use crate::versions::{crud, services, statistics};
 use crate::web::schema::VersionOut;
 use crate::web::utils::json_response;
 use crate::web::AppStateType;
@@ -88,9 +89,19 @@ async fn compare_two_versions_endpoint(
             error::ErrorInternalServerError(format!("Error while comparing two versions: {}", e))
         })?;
 
-    let diff = compare_result.get();
+    let Some(diff) = compare_result.get() else {
+        return Ok(HttpResponse::NoContent().finish());
+    };
 
-    Ok(json_response(StatusCode::OK, &diff))
+    let statistics = statistics::get_diff_statistics(&diff);
+
+    #[derive(serde::Serialize)]
+    struct Response<'s> {
+        diff: &'s HttpSchemaDiff,
+        statistics: statistics::DiffStatistics,
+    }
+
+    Ok(json_response(StatusCode::OK, &Response { diff, statistics }))
 }
 
 #[get("/{id}/diff")]

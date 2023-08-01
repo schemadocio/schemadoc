@@ -45,7 +45,7 @@ export const VersionView: React.FC<VersionViewProps> = ({
     });
   }, [versionId, project.slug]);
 
-  if (!diff) {
+  if (!diff || !version) {
     return <Loading text="diff" />;
   }
 
@@ -53,6 +53,7 @@ export const VersionView: React.FC<VersionViewProps> = ({
     <Box width="100%" maxWidth={1120}>
       <VersionMeta
         diff={diff}
+        statistics={version.statistics}
         focusPath={options?.focusPath}
         showSearch={options?.showSearch}
         showFilters={options?.showFilters}

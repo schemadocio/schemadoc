@@ -37,7 +37,7 @@ const ProjectSideMenu: React.FC<ProjectSideMenuProps> = ({ project }) => {
       ml={4}
       mr={2}
       top={4}
-      width={240}
+      width={260}
       maxHeight="calc(100vh - 20px)"
       position="sticky"
       flexDirection="column"

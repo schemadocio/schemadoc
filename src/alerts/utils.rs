@@ -36,7 +36,7 @@ mod tests {
         let blocks = get_message_chunks(message, 5);
 
         assert_eq!(
-            *blocks.iter().map(|b| b.text.text).collect::<Vec<&str>>(),
+            *blocks,
             ["q\nwr\n", "ert\n", "fg\nzs"]
         )
     }

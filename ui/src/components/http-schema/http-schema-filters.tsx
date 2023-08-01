@@ -18,19 +18,28 @@ const usePrevious = <T,>(value: T): T | null => {
   return ref.current;
 };
 
+export interface SchemaFiltersStatistics {
+  total: number;
+  added: number;
+  updated: number;
+  removed: number;
+}
 interface HttpSchemaFiltersProps {
   onFiltersChanged: (types: DiffResultIs[]) => void;
+  statistics: SchemaFiltersStatistics;
   defaults?: DiffResultIs[];
 }
 
 const HttpSchemaFilters: React.FC<HttpSchemaFiltersProps> = ({
+  statistics,
   defaults = [],
   onFiltersChanged,
 }: HttpSchemaFiltersProps) => {
   const [searchParams, _] = useSearchParams();
 
+  let defaultFilters: DiffResultIs[] = [];
+
   const diffTypeFilters = searchParams.get("diffTypeFilters");
-  let defaultFilters = defaults;
   if (diffTypeFilters) {
     defaultFilters = diffTypeFilters.split(",").map((element) => {
       switch (element) {
@@ -44,6 +53,12 @@ const HttpSchemaFilters: React.FC<HttpSchemaFiltersProps> = ({
           return "=";
       }
     }) as DiffResultIs[];
+  }
+
+  if (defaults && defaults.length > 0) {
+    if (statistics.added || statistics.updated || statistics.removed) {
+      defaultFilters = defaults;
+    }
   }
 
   const [all, setAll] = useState<boolean>(defaultFilters.length === 0);
@@ -128,28 +143,28 @@ const HttpSchemaFilters: React.FC<HttpSchemaFiltersProps> = ({
         variant={all ? "solid" : "ghost"}
         onClick={() => setAllFilter(!all)}
       >
-        All
+        All ({statistics.total})
       </Button>
       <Button
         variant={added ? "solid" : "ghost"}
         onClick={() => setAddedFilter(!added)}
         colorScheme="green"
       >
-        Added
+        Added ({statistics.added})
       </Button>
       <Button
         variant={updated ? "solid" : "ghost"}
         onClick={() => setUpdatedFilter(!updated)}
         colorScheme="orange"
       >
-        Updated
+        Updated ({statistics.updated})
       </Button>
       <Button
         variant={removed ? "solid" : "ghost"}
         onClick={() => setRemovedFilter(!removed)}
         colorScheme="red"
       >
-        Removed
+        Removed ({statistics.removed})
       </Button>
     </HStack>
   );

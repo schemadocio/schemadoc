@@ -1,6 +1,6 @@
 import { AxiosInstance } from "axios";
-import { Version } from "../components/versions/models";
 import { HttpSchemaDiff } from "../components/http-schema/models";
+import { Version, VersionStatistics } from "../components/versions/models";
 
 const versionsApi = (axios: AxiosInstance) => ({
   list: (projectSlug: string) =>
@@ -14,7 +14,7 @@ const versionsApi = (axios: AxiosInstance) => ({
       `/v1/projects/${projectSlug}/versions/${id}/diff`
     ),
   compare: (projectSlug: string, srcId: number, tgtId: number) =>
-    axios.get<HttpSchemaDiff | null>(
+    axios.get<{ diff: HttpSchemaDiff; statistics: VersionStatistics } | null>(
       `/v1/projects/${projectSlug}/versions/${srcId}/compare/${tgtId}`
     ),
 });

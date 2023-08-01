@@ -26,7 +26,9 @@ import {
   valueOfApplied,
   valueOf,
 } from "./common";
-import HttpSchemaFilters from "./http-schema-filters";
+import HttpSchemaFilters, {
+  SchemaFiltersStatistics,
+} from "./http-schema-filters";
 
 const makeSchemaDeref: (
   diff: HttpSchemaDiff
@@ -206,6 +208,7 @@ export const FocusPathContext = React.createContext<string | null>(null);
 
 interface HttpSchemaProps {
   diff: HttpSchemaDiff;
+  statistics: SchemaFiltersStatistics;
 
   focusPath?: string;
 
@@ -216,6 +219,7 @@ interface HttpSchemaProps {
 
 const HttpSchema: React.FC<HttpSchemaProps> = ({
   diff,
+  statistics,
 
   focusPath = "",
 
@@ -360,6 +364,7 @@ const HttpSchema: React.FC<HttpSchemaProps> = ({
                   )}
                   {showFilters && (
                     <HttpSchemaFilters
+                      statistics={statistics}
                       defaults={filterDiffTypes}
                       onFiltersChanged={setFilters}
                     />

@@ -16,27 +16,71 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
 }: VersionListItemProps) => {
   return (
     <Link to={String(version.id)}>
-      <HStack p={1} borderRadius={5} _hover={{ bgColor: "gray.100" }}>
+      <Flex
+        p={1}
+        borderRadius={5}
+        alignItems="center"
+        _hover={{ bgColor: "gray.100" }}
+        justifyContent="space-between"
+      >
         <Icon as={CgGitCommit} mr={1} w={4} h={4} />
         <Flex flexDirection="column" alignItems="stretch" flex={1}>
           <Text>
             [{version.id}] {version.message}
           </Text>
 
-          <Flex
-            justifyContent="space-between"
-            alignItems="baseline"
-            color="gray.600"
-            fontSize={14}
-            flex={1}
-          >
-            <Text>{version.version || "none"}</Text>
-            <Text fontStyle="italic" mr={1}>
-              {humanizeDateTimeOffset(version.createdAt)}
-            </Text>
-          </Flex>
+          <Text color="gray.400" fontSize={14}>
+            {version.version || "none"}
+          </Text>
         </Flex>
-      </HStack>
+
+        <HStack
+          mx={5}
+          flex={1}
+          spacing={5}
+          alignItems="baseline"
+          justifyContent="right"
+        >
+          <Text color="gray.400" fontStyle="italic" mr={1}>
+            {humanizeDateTimeOffset(version.createdAt)}
+          </Text>
+
+          <HStack spacing={10}>
+            <Link to={`${version.id}?diffTypeFilters=added`}>
+              <Text
+                color="green.600"
+                _hover={{ cursor: "pointer", textDecoration: "underline" }}
+              >
+                +{version.statistics.added}
+              </Text>
+            </Link>
+            <Link to={`${version.id}?diffTypeFilters=updated`}>
+              <Text
+                color="orange.600"
+                _hover={{ cursor: "pointer", textDecoration: "underline" }}
+              >
+                {version.statistics.updated}
+              </Text>
+            </Link>
+            <Link to={`${version.id}?diffTypeFilters=removed`}>
+              <Text
+                color="red.800"
+                _hover={{ cursor: "pointer", textDecoration: "underline" }}
+              >
+                -{version.statistics.removed}
+              </Text>
+            </Link>
+            <Link to={`${version.id}?diffTypeFilters=all`}>
+              <Text
+                color="gray.700"
+                _hover={{ cursor: "pointer", textDecoration: "underline" }}
+              >
+                {version.statistics.total}
+              </Text>
+            </Link>
+          </HStack>
+        </HStack>
+      </Flex>
     </Link>
   );
 };

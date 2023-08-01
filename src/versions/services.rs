@@ -10,6 +10,7 @@ use crate::settings::Settings;
 use crate::models::{ProjectSlug, Version};
 use crate::storage::{Storage, Storer};
 use crate::{alerts, dependencies, versions};
+use crate::versions::statistics;
 
 pub async fn compare_versions(
     app_state: &AppState,
@@ -29,7 +30,7 @@ pub async fn compare_versions(
     let src_schema_content = storage.read_file(&src_version.file_path).await?;
     let tgt_schema_content = storage.read_file(&tgt_version.file_path).await?;
 
-    let diff = compare_versions_content(
+    let diff = compare_schemas_content(
         &String::from_utf8_lossy(&src_schema_content),
         &String::from_utf8_lossy(&tgt_schema_content),
     )?;
@@ -44,7 +45,7 @@ pub async fn compare_version_with_schema_content(
 ) -> anyhow::Result<DiffResult<HttpSchemaDiff>> {
     let src_schema_content = storage.read_file(&src_version.file_path).await?;
 
-    let diff = compare_versions_content(
+    let diff = compare_schemas_content(
         &String::from_utf8_lossy(&src_schema_content),
         tgt_schema_content,
     )?;
@@ -52,7 +53,7 @@ pub async fn compare_version_with_schema_content(
     Ok(diff)
 }
 
-fn compare_versions_content(
+pub fn compare_schemas_content(
     src_schema_content: &str,
     tgt_schema_content: &str,
 ) -> Result<DiffResult<HttpSchemaDiff>, schemadoc_diff::error::Error> {
@@ -94,7 +95,7 @@ async fn create_version_inner(
         }
         None => {
             // For first version compare to itself
-            compare_versions_content(content, content)?
+            compare_schemas_content(content, content)?
         }
     };
 
@@ -141,11 +142,14 @@ async fn create_version_inner(
         .get()
         .and_then(|info| info.version.get().map(|v| v.to_owned()));
 
+    let statistics = statistics::get_diff_statistics(&diff);
+
     let version = Version {
         id,
         version,
         message,
         file_path,
+        statistics,
         diff_file_path,
         diff_file_version,
         created_at: Utc::now(),

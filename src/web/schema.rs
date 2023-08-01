@@ -1,6 +1,7 @@
 use crate::models::{Alert, AlertKind, AlertSource, DataSource, DataSourceSource, DataSourceStatus, Dependency, Link, Project, ProjectSlug, Version};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use crate::versions::statistics::DiffStatistics;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -11,6 +12,8 @@ pub struct VersionOut<'s> {
 
     pub file_path: &'s String,
     pub diff_file_path: &'s String,
+
+    pub statistics: &'s DiffStatistics,
 
     pub created_at: &'s DateTime<Utc>,
 }
@@ -24,6 +27,7 @@ impl<'s> From<&'s Version> for VersionOut<'s> {
             file_path: &value.file_path,
             diff_file_path: &value.diff_file_path,
             created_at: &value.created_at,
+            statistics: &value.statistics,
         }
     }
 }
