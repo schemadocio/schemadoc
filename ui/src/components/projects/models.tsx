@@ -4,11 +4,13 @@ export interface Project {
   kind: "server" | "client";
   description: string;
 
-  links: Link[] | null;
+  links: Link[];
+  alerts: Alert[];
 
-  alerts: Alert[] | null;
+  branches: string[];
+
   dataSource: DataSource | null;
-  dependencies: Dependency[] | null;
+  dependencies: Dependency[];
 }
 
 export interface Link {
@@ -28,6 +30,7 @@ export interface Alert {
 }
 
 export interface Dependency {
+  branch: string;
   project: string;
   version: number;
   outdated: boolean;

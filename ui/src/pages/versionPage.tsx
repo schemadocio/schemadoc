@@ -10,9 +10,9 @@ interface VersionPageProps {}
 const VersionPage: React.FC<VersionPageProps> = () => {
   const project = useContext(ProjectContext);
 
-  const { versionId } = useParams();
+  const { branchName, versionId } = useParams();
 
-  if (!versionId || !project) {
+  if (!versionId || !project || !branchName) {
     return null;
   }
 
@@ -20,6 +20,7 @@ const VersionPage: React.FC<VersionPageProps> = () => {
     <VersionView
       project={project}
       versionId={+versionId}
+      branchName={branchName}
       options={{
         defaultDiffTypes: [
           DiffResultIs.Added,

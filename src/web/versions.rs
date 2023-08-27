@@ -1,7 +1,8 @@
+use std::ops::{Deref, DerefMut};
+
 use actix_web::http::StatusCode;
 use actix_web::web::Bytes;
 use actix_web::{error, get, post, web, HttpRequest, Responder, HttpResponse};
-use std::ops::DerefMut;
 use schemadoc_diff::schema_diff::HttpSchemaDiff;
 
 use crate::settings::Settings;
@@ -14,14 +15,16 @@ use crate::web::AppStateType;
 
 #[get("")]
 async fn list_versions_endpoint(
-    path: web::Path<ProjectSlug>,
+    path: web::Path<(ProjectSlug, String)>,
     state: web::Data<AppStateType>,
 ) -> Result<impl Responder, error::Error> {
     let state = state.read().await;
 
-    let versions = crud::get_versions(&state, &path)
-        .await
-        .ok_or(error::ErrorInternalServerError("Versions not found."))?;
+    let (project_slug, branch_name) = path.as_ref();
+
+    let Some(versions) = crud::get_versions(&state, project_slug, branch_name) else {
+        return Ok(json_response::<Vec<VersionOut>>(StatusCode::OK, &vec![]));
+    };
 
     let results: Vec<_> = versions.iter().map(VersionOut::from).rev().collect();
 
@@ -30,12 +33,14 @@ async fn list_versions_endpoint(
 
 #[post("")]
 async fn add_version_endpoint(
-    path: web::Path<ProjectSlug>,
+    path: web::Path<(ProjectSlug, String)>,
     bytes: Bytes,
     req: HttpRequest,
     state: web::Data<AppStateType>,
     settings: web::Data<Settings>,
 ) -> Result<impl Responder, error::Error> {
+    let (project_slug, branch_name) = path.as_ref();
+
     let mut state = state.write().await;
 
     let message = req
@@ -45,11 +50,45 @@ async fn add_version_endpoint(
         .transpose()
         .map_err(error::ErrorBadRequest)?;
 
-    let content = String::from_utf8_lossy(&bytes);
+    let branch_base_name = req
+        .headers()
+        .get("X-Branch-Base-Name")
+        .map(|m| m.to_str().map(|s| s.to_owned()))
+        .transpose()
+        .map_err(error::ErrorBadRequest)?;
 
-    let version = services::create_version(&settings, state.deref_mut(), &path, message, &content)
-        .await
-        .map_err(|e| error::ErrorInternalServerError(format!("Error creating version: {}", e)))?;
+    let branch_base_version_id = req
+        .headers()
+        .get("X-Branch-Base-Version-Id")
+        .map(|m| m.to_str().map(|s| s.to_owned().parse::<u32>()))
+        .transpose()
+        .map_err(error::ErrorBadRequest)?
+        .transpose()
+        .map_err(error::ErrorBadRequest)?;
+
+    let base = crate::branches::get_branch_base(
+        state.deref(),
+        project_slug,
+        branch_base_name,
+        branch_base_version_id,
+    ).await
+        .map_err(|e| error::ErrorBadRequest(e))?;
+
+    let version = {
+        let state = state.deref_mut();
+
+        crate::branches::create_branch(state, project_slug, branch_name, base)
+            .await
+            .map_err(|e| error::ErrorBadRequest(e))?;
+
+        let content = String::from_utf8_lossy(&bytes);
+
+        services::create_version(
+            &settings, state, project_slug, branch_name, message, &content,
+        )
+            .await
+            .map_err(|e| error::ErrorInternalServerError(format!("Error creating version: {}", e)))?
+    };
 
     let result = version.as_ref().map(VersionOut::from);
 
@@ -58,15 +97,14 @@ async fn add_version_endpoint(
 
 #[get("/{id}")]
 async fn get_version_by_id_endpoint(
-    path: web::Path<(ProjectSlug, u32)>,
+    path: web::Path<(ProjectSlug, String, u32)>,
     state: web::Data<AppStateType>,
 ) -> Result<impl Responder, error::Error> {
-    let (project_slug, id) = &path.into_inner();
+    let (project_slug, branch_name, id) = &path.into_inner();
 
     let state = state.read().await;
 
-    let version = crud::get_version(&state, project_slug, *id)
-        .await
+    let version = crud::get_version(&state, project_slug, branch_name, *id)
         .ok_or(error::ErrorNotFound("Version not found"))?;
 
     let result = VersionOut::from(version);
@@ -74,17 +112,18 @@ async fn get_version_by_id_endpoint(
     Ok(json_response(StatusCode::OK, &result))
 }
 
-#[get("/{id}/compare/{tgtId}")]
+#[get("/{id}/compare/{tgt_branch_name}/{tgt_id}")]
 async fn compare_two_versions_endpoint(
-    path: web::Path<(ProjectSlug, u32, u32)>,
+    path: web::Path<(ProjectSlug, String, u32, String, u32)>,
     state: web::Data<AppStateType>,
 ) -> Result<impl Responder, error::Error> {
-    let (project, src_id, tgt_id) = path.into_inner();
+    let (project, src_branch_name, src_id, tgt_branch_name, tgt_id) = path.as_ref();
 
     let state = state.read().await;
 
-    let compare_result = services::compare_versions(&state, &project, src_id, tgt_id)
-        .await
+    let compare_result = services::compare_versions(
+        &state, &project, src_branch_name, *src_id, tgt_branch_name, *tgt_id,
+    ).await
         .map_err(|e| {
             error::ErrorInternalServerError(format!("Error while comparing two versions: {}", e))
         })?;
@@ -106,15 +145,14 @@ async fn compare_two_versions_endpoint(
 
 #[get("/{id}/diff")]
 async fn get_version_diff_content_endpoint(
-    path: web::Path<(ProjectSlug, u32)>,
+    path: web::Path<(ProjectSlug, String, u32)>,
     state: web::Data<AppStateType>,
 ) -> Result<impl Responder, error::Error> {
-    let (project_slug, id) = &path.into_inner();
+    let (project_slug, branch_name, id) = &path.into_inner();
 
     let state = state.read().await;
 
-    let version = crud::get_version(&state, project_slug, *id)
-        .await
+    let version = crud::get_version(&state, project_slug, branch_name, *id)
         .ok_or(error::ErrorNotFound("Version not found"))?;
 
     let content = state.storage.read_file(&version.diff_file_path).await?;
@@ -122,7 +160,7 @@ async fn get_version_diff_content_endpoint(
 }
 
 pub fn get_versions_api_scope() -> actix_web::Scope {
-    web::scope("projects/{project_slug}/versions")
+    web::scope("projects/{project_slug}/branches/{branch_name}/versions")
         .service(add_version_endpoint)
         .service(list_versions_endpoint)
         .service(get_version_by_id_endpoint)

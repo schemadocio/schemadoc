@@ -57,25 +57,37 @@ pub struct Project {
     pub kind: ProjectKind,
     pub description: Option<String>,
 
+    pub default_branch: String,
+
     pub links: Option<Vec<Link>>,
 
-    pub alerts: Option<Vec<Alert>>,
-    pub versions: Option<Vec<Version>>,
+    pub alerts: Vec<Alert>,
+    pub branches: Vec<Branch>,
     pub data_source: Option<DataSource>,
-    pub dependencies: Option<Vec<Dependency>>,
+    pub dependencies: Vec<Dependency>,
 }
+
 
 impl Project {
     pub async fn load_persistent_data<S>(&mut self, storage: &S) -> anyhow::Result<()>
         where
             S: Storer,
     {
-        let version_file_path = format!("projects/{}/versions.yaml", self.slug);
-        let versions = load_data_file::<Vec<Version>, _, _, PersistentDataFile<_>>(storage, version_file_path)
+        let branches_file_path = format!("projects/{}/branches.yaml", self.slug);
+        self.branches = load_data_file::<Vec<Branch>, _, _, PersistentDataFile<_>>(storage, branches_file_path)
             .await
             .unwrap_or_default();
 
-        self.versions = Some(versions);
+        if self.branches.is_empty() {
+            println!("{} - Add default branch: {} ", self.slug, self.default_branch);
+            self.branches.push(Branch {
+                name: self.default_branch.clone(),
+                versions: vec![],
+                base: None,
+            });
+
+            self.persist_branches(storage).await?;
+        }
 
         if let Some(data_source) = &mut self.data_source {
             let data_source_status_file_path = format!("projects/{}/datasource.yaml", self.slug);
@@ -90,16 +102,12 @@ impl Project {
         Ok(())
     }
 
-    pub async fn persist_versions<S>(&self, storage: &S) -> anyhow::Result<()>
+    pub async fn persist_branches<S>(&self, storage: &S) -> anyhow::Result<()>
         where
             S: Storer,
     {
-        let Some(versions) = &self.versions else {
-            return Ok(());
-        };
-
-        let path = format!("projects/{}/versions.yaml", self.slug);
-        persist_data_file::<Vec<Version>, _, _, PersistentDataFile<_>>(storage, path, versions).await?;
+        let path = format!("projects/{}/branches.yaml", self.slug);
+        persist_data_file::<Vec<Branch>, _, _, PersistentDataFile<_>>(storage, path, &self.branches).await?;
 
         Ok(())
     }
@@ -143,18 +151,41 @@ impl ProjectKind {
     pub fn is_server(&self) -> bool {
         matches!(self, Self::Server)
     }
-
     pub fn is_client(&self) -> bool {
         matches!(self, Self::Client)
     }
 }
 
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Branch {
+    pub name: String,
+    pub versions: Vec<Version>,
+    pub base: Option<BranchBase>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct BranchBase {
+    pub name: String,
+    pub version_id: u32,
+}
+
+
+impl Versioned for Vec<Branch> {
+    fn latest() -> &'static str {
+        "0.1"
+    }
+}
+
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Dependency {
     pub project: ProjectSlug,
+    pub branch: String,
+
     pub version: u32,
 
-    // cached fields
+    // calculated fields
     pub breaking: Option<bool>,
     pub outdated: Option<bool>,
 }
@@ -165,10 +196,24 @@ pub struct Alert {
     pub kind: AlertKind,
     pub source: AlertSource,
 
+    pub branches: Vec<String>,
+
     pub is_active: bool,
 
     pub service: String,
     pub service_config: Value,
+}
+
+impl Alert {
+    pub fn includes_branch(&self, branch: &str, default_branch: &str) -> bool {
+        if self.branches.is_empty() && branch == default_branch {
+            true
+        } else if self.branches.iter().any(|b| b.as_str() == "*" || b.as_str() == branch) {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -214,15 +259,10 @@ pub struct Version {
     pub created_at: DateTime<Utc>,
 }
 
-impl Versioned for Vec<Version> {
-    fn latest() -> &'static str {
-        "0.1"
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DataSource {
     pub name: String,
+    pub branch: String,
     pub source: DataSourceSource,
     // persisted field
     pub status: Option<DataSourceStatus>,

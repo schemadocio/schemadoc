@@ -3,6 +3,7 @@ mod datasources;
 mod projects;
 mod schema;
 mod utils;
+mod branches;
 mod versions;
 
 use actix_cors::Cors;
@@ -17,6 +18,7 @@ use crate::app_state::AppState;
 use crate::web::common::get_common_api_scope;
 use crate::web::projects::get_projects_api_scope;
 use crate::web::versions::get_versions_api_scope;
+use crate::web::branches::get_branches_api_scope;
 use crate::web::datasources::get_datasource_api_scope;
 
 pub type AppStateType = RwLock<AppState>;
@@ -73,6 +75,7 @@ pub async fn serve(host: &str, port: u16) -> anyhow::Result<()> {
                 web::scope("/v1")
                     .service(get_common_api_scope())
                     .service(get_versions_api_scope())
+                    .service(get_branches_api_scope())
                     .service(get_projects_api_scope())
                     .service(get_datasource_api_scope()),
             )

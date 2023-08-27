@@ -7,12 +7,12 @@ use chrono::{Duration, Utc};
 
 pub async fn pull_project_datasource(
     settings: &Settings,
-    app_state: &mut AppState,
+    state: &mut AppState,
     project_slug: &ProjectSlug,
     force: bool,
 ) -> anyhow::Result<()> {
-    let content = {
-        let Some(project) = app_state.projects.get_mut(project_slug)else {
+    let (content, branch_name) = {
+        let Some(project) = state.projects.get_mut(project_slug)else {
             return Err(anyhow!("Project not found"));
         };
 
@@ -34,7 +34,7 @@ pub async fn pull_project_datasource(
         if !force {
             if let Some(pull_last_at) = status.pull_last_at {
                 if pull_last_at + Duration::minutes(status.pull_interval_minutes as i64) > now {
-                    println!("Not now: {}::{}", &project.slug, &datasource.name);
+                    println!("Skip pulling: {}::{}", &project.slug, &datasource.name);
                     return Ok(());
                 }
             }
@@ -68,14 +68,18 @@ pub async fn pull_project_datasource(
             status.pull_enabled = false;
         }
 
-        project.persist_datasource(&app_state.storage).await?;
+        let branch_name = datasource.branch.to_owned();
 
-        content
+        project.persist_datasource(&state.storage).await?;
+
+        (content, branch_name)
     };
 
     if let Some(content) = content {
         let message = Some("Pull from datasource".to_owned());
-        versions::services::create_version(settings, app_state, project_slug, message, &content).await?;
+        versions::services::create_version(
+            settings, state, project_slug, &branch_name, message, &content,
+        ).await?;
     }
 
     Ok(())

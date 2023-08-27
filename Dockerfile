@@ -26,6 +26,7 @@ RUN npm run build
 FROM alpine:3.18
 
 ENV SD_PERSISTENCE_PATH=/schemadoc
+ENV SD_PERSISTENCE_CONFIG_PATH=/schemadoc
 ENV SD_FRONTEND_STATIC_FILES=/static
 
 COPY --from=builder /server/target/release/schemadoc /bin/schemadoc

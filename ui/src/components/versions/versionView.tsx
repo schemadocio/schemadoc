@@ -14,6 +14,7 @@ import { Version } from "./models";
 interface VersionViewProps {
   project: Project;
   versionId: number;
+  branchName: string;
   options?: VersionViewOptions;
 }
 
@@ -27,6 +28,7 @@ interface VersionViewOptions {
 
 export const VersionView: React.FC<VersionViewProps> = ({
   project,
+  branchName,
   versionId,
   options,
 }) => {
@@ -35,15 +37,17 @@ export const VersionView: React.FC<VersionViewProps> = ({
 
   useEffect(() => {
     api.versions
-      .get(project.slug, versionId)
+      .get(project.slug, branchName, versionId)
       .then(({ data }) => data && setVersion(data));
-  }, [project.slug, versionId]);
+  }, [project.slug, branchName, versionId]);
 
   useEffect(() => {
-    api.versions.getDiff(project.slug, versionId).then(({ data }) => {
-      setDiff(data);
-    });
-  }, [versionId, project.slug]);
+    api.versions
+      .getDiff(project.slug, branchName, versionId)
+      .then(({ data }) => {
+        setDiff(data);
+      });
+  }, [project.slug, branchName, versionId]);
 
   if (!diff || !version) {
     return <Loading text="diff" />;

@@ -1,0 +1,1 @@
+pub const BRANCH_DEFAULT_NAME: &'static str = "main";

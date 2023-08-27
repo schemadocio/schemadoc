@@ -21,12 +21,20 @@ const ProjectOverviewServer: React.FC<ProjectOverviewServerProps> = ({
   const [version, setVersion] = useState<Version | null>(null);
 
   useEffect(() => {
-    api.versions.list(project.slug).then(({ data }) => {
+    if (project.branches.length === 0) {
+      return;
+    }
+
+    api.versions.list(project.slug, project.branches[0]).then(({ data }) => {
       if (data.length > 0) {
         setVersion(data[0]);
       }
     });
-  }, [project.slug]);
+  }, [project.slug, project.branches]);
+
+  if (project.branches.length === 0) {
+    return <Box p={3}>No branches found for the project</Box>;
+  }
 
   if (!version) {
     return <Box p={3}>No versions found for the project</Box>;
@@ -64,6 +72,7 @@ const ProjectOverviewServer: React.FC<ProjectOverviewServerProps> = ({
       <VersionView
         project={project}
         versionId={version.id}
+        branchName={project.branches[0]}
         options={{ focusPath: decodeURI(hash) }}
       />
     </Box>

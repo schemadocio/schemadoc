@@ -3,19 +3,39 @@ import { HttpSchemaDiff } from "../components/http-schema/models";
 import { Version, VersionStatistics } from "../components/versions/models";
 
 const versionsApi = (axios: AxiosInstance) => ({
-  list: (projectSlug: string) =>
-    axios.get<Version[]>(`/v1/projects/${projectSlug}/versions`),
-  get: (projectSlug: string, id: number) =>
-    axios.get<Version>(`/v1/projects/${projectSlug}/versions/${id}`),
-  add: (projectSlug: string, id: number) =>
-    axios.post<Version | null>(`/v1/projects/${projectSlug}/versions/${id}`),
-  getDiff: (projectSlug: string, id: number) =>
-    axios.get<HttpSchemaDiff | null>(
-      `/v1/projects/${projectSlug}/versions/${id}/diff`
+  list: (projectSlug: string, branchName: string) =>
+    axios.get<Version[]>(
+      `/v1/projects/${projectSlug}/branches/${encodeURI(branchName)}/versions`
     ),
-  compare: (projectSlug: string, srcId: number, tgtId: number) =>
+  get: (projectSlug: string, branchName: string, id: number) =>
+    axios.get<Version>(
+      `/v1/projects/${projectSlug}/branches/${encodeURI(
+        branchName
+      )}/versions/${id}`
+    ),
+  add: (projectSlug: string, branchName: string, id: number) =>
+    axios.post<Version | null>(
+      `/v1/projects/${projectSlug}/branches/${encodeURI(
+        branchName
+      )}/versions/${id}`
+    ),
+  getDiff: (projectSlug: string, branchName: string, id: number) =>
+    axios.get<HttpSchemaDiff | null>(
+      `/v1/projects/${projectSlug}/branches/${encodeURI(
+        branchName
+      )}/versions/${id}/diff`
+    ),
+  compare: (
+    projectSlug: string,
+    srcBranch: string,
+    srcId: number,
+    tgtBranch: string,
+    tgtId: number
+  ) =>
     axios.get<{ diff: HttpSchemaDiff; statistics: VersionStatistics } | null>(
-      `/v1/projects/${projectSlug}/versions/${srcId}/compare/${tgtId}`
+      `/v1/projects/${projectSlug}/branches/${encodeURI(
+        srcBranch
+      )}/versions/${srcId}/compare/${encodeURI(tgtBranch)}/${tgtId}`
     ),
 });
 

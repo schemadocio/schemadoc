@@ -1,27 +1,27 @@
 use crate::app_state::AppState;
 use crate::models::{ProjectSlug, Version};
 
-pub async fn get_versions<'s>(
-    app_state: &'s AppState,
+pub fn get_versions<'s>(
+    state: &'s AppState,
     project_slug: &ProjectSlug,
+    branch_name: &str,
 ) -> Option<&'s Vec<Version>> {
-    let Some(project) = app_state.projects.get(project_slug) else {
+    let Some(project) = state.projects.get(project_slug) else {
         return None;
     };
 
-    project.versions.as_ref()
+    project.branches.iter()
+        .find(|b| b.name == branch_name)
+        .map(|x| &x.versions)
 }
 
-pub async fn get_version<'s>(
-    app_state: &'s AppState,
+pub fn get_version<'s>(
+    state: &'s AppState,
     project_slug: &ProjectSlug,
+    branch_name: &str,
     id: u32,
 ) -> Option<&'s Version> {
-    let Some(project) = app_state.projects.get(project_slug) else {
-        return None;
-    };
-
-    let Some(versions) = &project.versions else {
+    let Some(versions) = get_versions(state, project_slug, branch_name) else {
         return None;
     };
 
@@ -29,15 +29,20 @@ pub async fn get_version<'s>(
 }
 
 pub async fn delete_version(
-    app_state: &mut AppState,
+    state: &mut AppState,
     project_slug: &ProjectSlug,
+    branch_name: &str,
     id: u32,
 ) -> anyhow::Result<bool> {
-    let Some(project) = app_state.projects.get_mut(project_slug) else {
+    let Some(project) = state.projects.get_mut(project_slug) else {
         return Ok(false);
     };
 
-    let Some(versions) = &mut project.versions else {
+    let versions = project.branches.iter_mut()
+        .find(|b| b.name == branch_name)
+        .map(|x| &mut x.versions);
+
+    let Some(versions) = versions else {
         return Ok(false);
     };
 
@@ -45,7 +50,7 @@ pub async fn delete_version(
     versions.retain(|v| v.id != id);
     let len_after = versions.len();
 
-    project.persist_versions(&app_state.storage).await?;
+    project.persist_branches(&state.storage).await?;
 
     Ok(len != len_after)
 }

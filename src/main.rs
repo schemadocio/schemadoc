@@ -6,6 +6,8 @@ pub mod models;
 pub mod persistence;
 pub mod projects;
 pub mod scheduler;
+pub mod branches;
+pub mod constants;
 pub mod storage;
 pub mod versions;
 pub mod web;

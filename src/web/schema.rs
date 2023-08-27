@@ -101,6 +101,7 @@ impl<'s> From<&'s DataSource> for DataSourceOut<'s> {
 #[serde(rename_all = "camelCase")]
 pub struct DependencyOut<'s> {
     pub project: &'s str,
+    pub branch: &'s str,
     pub version: u32,
     pub outdated: Option<bool>,
     pub breaking: Option<bool>,
@@ -110,9 +111,10 @@ impl<'s> From<&'s Dependency> for DependencyOut<'s> {
     fn from(dependency: &'s Dependency) -> DependencyOut<'s> {
         Self {
             version: dependency.version,
-            project: dependency.project.as_str(),
             outdated: dependency.outdated,
             breaking: dependency.breaking,
+            branch: dependency.branch.as_str(),
+            project: dependency.project.as_str(),
         }
     }
 }
@@ -127,29 +129,32 @@ pub struct ProjectOut<'s> {
 
     pub links: Option<&'s Vec<Link>>,
 
-    pub alerts: Option<Vec<AlertOut<'s>>>,
+    pub branches: Vec<String>,
+    pub alerts: Vec<AlertOut<'s>>,
     pub data_source: Option<DataSourceOut<'s>>,
-    pub dependencies: Option<Vec<DependencyOut<'s>>>,
+    pub dependencies: Vec<DependencyOut<'s>>,
 }
 
 impl<'s> From<&'s Project> for ProjectOut<'s> {
     fn from(project: &'s Project) -> ProjectOut<'s> {
+        let alerts = project.alerts.iter()
+            .map(AlertOut::from)
+            .collect();
+
+        let branches = project.branches.iter()
+            .map(|b| b.name.clone())
+            .collect();
+
         Self {
+            alerts,
+            branches,
             slug: &project.slug,
             name: &project.name,
             kind: project.kind.as_str(),
-            description: project.description.as_deref(),
             links: project.links.as_ref(),
-            alerts: project
-                .alerts
-                .as_ref()
-                .map(|v| v.iter().map(AlertOut::from).collect()),
-            dependencies: project
-                .dependencies
-                .as_ref()
-                .map(|v| v.iter().map(DependencyOut::from).collect()),
-
+            description: project.description.as_deref(),
             data_source: project.data_source.as_ref().map(DataSourceOut::from),
+            dependencies: project.dependencies.iter().map(DependencyOut::from).collect(),
         }
     }
 }

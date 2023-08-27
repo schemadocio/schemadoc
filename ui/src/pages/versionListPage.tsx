@@ -1,5 +1,15 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Flex, Text, Stack, useDisclosure, Button } from "@chakra-ui/react";
+import {
+  Flex,
+  Text,
+  Stack,
+  useDisclosure,
+  Button,
+  Box,
+  Select,
+} from "@chakra-ui/react";
+
+import { useNavigate, useParams } from "react-router-dom";
 
 import ProjectContext from "../components/projects/projectContext";
 import { Project } from "../components/projects/models";
@@ -12,27 +22,49 @@ import VersionCompareModal from "../components/modals/versionsCompareModal";
 interface VersionListPageProps {}
 
 const VersionListPage: React.FC<VersionListPageProps> = () => {
+  const { branchName } = useParams();
+
+  const navigate = useNavigate();
+
   const project = useContext(ProjectContext);
+
+  useEffect(() => {
+    if (!branchName && project) {
+      navigate(project.branches[0]);
+    }
+  }, [branchName, project, navigate]);
 
   if (!project) {
     return null;
   }
 
-  return <VersionList project={project} />;
+  if (!project.branches[0] || !branchName) {
+    return <Box>No branches found for the project</Box>;
+  }
+
+  return <VersionList project={project} branchName={branchName} />;
 };
 
 export default VersionListPage;
 
 interface VersionListProps {
   project: Project;
+  branchName: string;
 }
 
-export const VersionList: React.FC<VersionListProps> = ({ project }) => {
+export const VersionList: React.FC<VersionListProps> = ({
+  project,
+  branchName,
+}) => {
+  const navigate = useNavigate();
+
   const [versions, setVersions] = useState<Version[] | null>(null);
 
   useEffect(() => {
-    api.versions.list(project.slug).then(({ data }) => setVersions(data));
-  }, [project.slug]);
+    api.versions
+      .list(project.slug, branchName)
+      .then(({ data }) => setVersions(data));
+  }, [project.slug, branchName]);
 
   const {
     isOpen: compareVersionsIsOpen,
@@ -44,7 +76,25 @@ export const VersionList: React.FC<VersionListProps> = ({ project }) => {
     <Flex flex="1">
       <Flex maxWidth="1120px" width="100%" flexDirection="column">
         <Flex justifyContent="space-between">
-          <Text fontSize="2xl">Versions</Text>
+          <Flex>
+            <Text fontSize="2xl">Versions</Text>
+            <Select
+              ml={1}
+              onChange={(e) =>
+                navigate(`../${e.target.value}`, { relative: "path" })
+              }
+            >
+              {project.branches.map((branch) => (
+                <option
+                  key={branch}
+                  value={branch}
+                  selected={branch === branchName}
+                >
+                  {branch}
+                </option>
+              ))}
+            </Select>
+          </Flex>
           <Button size="sm" colorScheme="green" onClick={compareVersionsOnOpen}>
             Compare versions
           </Button>
@@ -62,7 +112,7 @@ export const VersionList: React.FC<VersionListProps> = ({ project }) => {
               <VersionListItem key={version.id} version={version} />
             ))
           ) : (
-            <div>No data</div>
+            <Box mx={2}>No data</Box>
           )}
         </Stack>
       </Flex>
@@ -70,6 +120,7 @@ export const VersionList: React.FC<VersionListProps> = ({ project }) => {
       {compareVersionsIsOpen && (
         <VersionCompareModal
           project={project}
+          defaultSourceBranch={branchName}
           isOpen={compareVersionsIsOpen}
           onClose={compareVersionsOnClose}
         />

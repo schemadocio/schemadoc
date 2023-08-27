@@ -8,7 +8,6 @@ const AppLayout: React.FC<AppLayoutProps> = () => {
   return (
     <Flex
       minHeight="100vh"
-      bgColor="gray.200"
       flexDirection="column"
       justifyContent="space-between"
     >

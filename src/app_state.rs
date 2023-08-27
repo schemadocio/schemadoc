@@ -1,11 +1,13 @@
+use std::collections::HashMap;
 use anyhow::bail;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use crate::constants;
 
-use crate::dependencies::update_dependent_projects;
-use crate::models::{Alert, DataSource, Dependency, Link, Project, ProjectKind, ProjectSlug};
-use crate::persistence::{load_data_file, PersistentData, Versioned};
 use crate::settings::Settings;
+use crate::dependencies::setup_project_dependencies;
+use crate::models::{Alert, AlertKind, AlertSource, DataSource, DataSourceSource, Dependency, Link, Project, ProjectKind, ProjectSlug};
+use crate::persistence::{load_data_file, PersistentData, Versioned};
 use crate::storage::{LocalStorage, Storage};
 
 #[derive(Debug)]
@@ -39,66 +41,132 @@ impl AppState {
     }
 
     pub async fn read(storage: Storage, config_storage: Option<Storage>) -> anyhow::Result<Self> {
-        let app_state =
+        let state_data =
             load_data_file::<AppStatePersistentData, _, _, PersistentProjectsFile<_>>(
                 config_storage.as_ref().unwrap_or(&storage), "schemadoc.yaml",
             ).await?;
 
-        let mut projects: IndexMap<_, _> = app_state.0
+        let default_branches: HashMap<_, _> = state_data.0.iter()
+            .map(|(slug, config)|
+                (
+                    slug.clone(),
+                    config.default_branch
+                        .as_ref()
+                        .map(|v| v.as_str())
+                        .unwrap_or(constants::BRANCH_DEFAULT_NAME)
+                        .to_owned()
+                )
+            ).collect();
+
+        let mut projects: IndexMap<_, _> = state_data.0
             .into_iter()
             .map(|(slug, config)| {
+                let default_branch = config.default_branch
+                    .unwrap_or_else(|| constants::BRANCH_DEFAULT_NAME.to_owned());
+
                 let dependencies = config.dependencies
                     .map(
                         |deps|
-                            deps.into_iter().map(
-                                |(project, version)|
-                                    Dependency {
-                                        project,
-                                        version: version.parse().unwrap_or(0),
-                                        breaking: None,
-                                        outdated: None,
+                            deps.into_iter().filter_map(
+                                |(project, def)|
+                                    {
+                                        let Some(branch) = default_branches.get(&project).map(|x| x.to_owned()) else {
+                                            return None;
+                                        };
+
+                                        let dependency = if let Ok(version) = serde_yaml::from_value::<u32>(def.clone()) {
+                                            Dependency {
+                                                branch,
+                                                project,
+                                                version,
+                                                breaking: None,
+                                                outdated: None,
+                                            }
+                                        } else if let Ok(version) = serde_yaml::from_value::<String>(def.clone()) {
+                                            Dependency {
+                                                branch,
+                                                project,
+                                                version: version.parse().unwrap_or(0),
+                                                breaking: None,
+                                                outdated: None,
+                                            }
+                                        } else if let Ok(config) = serde_yaml::from_value::<ProjectDependencyConfig>(def.clone()) {
+                                            Dependency {
+                                                branch,
+                                                project,
+                                                version: config.version
+                                                    .parse()
+                                                    .unwrap_or(0),
+                                                breaking: None,
+                                                outdated: None,
+                                            }
+                                        } else {
+                                            panic!("In {} dependency {} has unknown structure", slug, project)
+                                        };
+
+                                        Some(dependency)
                                     }
                             ).collect()
                     );
 
                 let kind = config.kind.unwrap_or(ProjectKind::Server);
 
+                let alerts = config.alerts
+                    .map(|alerts|
+                        alerts.into_iter().map(
+                            |alert|
+                                Alert {
+                                    name: alert.name,
+                                    kind: alert.kind,
+                                    source: alert.source,
+                                    branches: alert.branches.unwrap_or_default(),
+                                    is_active: alert.is_active,
+                                    service: alert.service,
+                                    service_config: alert.service_config,
+                                }
+                        ).collect()
+                    )
+                    .unwrap_or_default();
+
+
+                let data_source = config.data_source
+                    .map(|ds| DataSource {
+                        status: None,
+                        name: ds.name,
+                        source: ds.source,
+                        branch: ds.branch.unwrap_or(default_branch.clone()),
+                    });
+
                 let project = Project {
                     kind,
-                    dependencies,
-                    versions: None,
+                    alerts,
+                    data_source,
+                    default_branch,
+                    branches: vec![],
                     slug: slug.clone(),
                     name: config.name,
                     links: config.links,
-                    alerts: config.alerts,
                     description: config.description,
-                    data_source: config.data_source,
+                    dependencies: dependencies.unwrap_or_default(),
                 };
 
                 (slug, project)
             }).collect();
 
+
         for project in projects.values_mut() {
             project.load_persistent_data(&storage).await?;
         }
 
-        let mut app_state = Self {
+        let mut state = Self {
             projects,
             storage,
             config_storage,
         };
 
-        // Update dependent projects dependencies status
-        let slugs = app_state
-            .projects
-            .keys()
-            .map(|slug| slug.to_owned())
-            .collect::<Vec<_>>();
-        for slug in slugs {
-            update_dependent_projects(&mut app_state, &slug).await?;
-        }
+        setup_project_dependencies(&mut state).await?;
 
-        Ok(app_state)
+        Ok(state)
     }
 }
 
@@ -120,11 +188,39 @@ pub struct ProjectConfig {
 
     pub links: Option<Vec<Link>>,
 
-    pub alerts: Option<Vec<Alert>>,
-    pub data_source: Option<DataSource>,
-    pub dependencies: Option<IndexMap<ProjectSlug, String>>,
+    pub alerts: Option<Vec<AlertConfig>>,
+    pub data_source: Option<DataSourceConfig>,
+    pub dependencies: Option<IndexMap<ProjectSlug, serde_yaml::Value>>,
+
+    pub default_branch: Option<String>,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AlertConfig {
+    pub name: String,
+    pub kind: AlertKind,
+    pub source: AlertSource,
+
+    pub branches: Option<Vec<String>>,
+
+    pub is_active: bool,
+
+    pub service: String,
+    pub service_config: serde_yaml::Value,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DataSourceConfig {
+    pub name: String,
+    pub branch: Option<String>,
+    pub source: DataSourceSource,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ProjectDependencyConfig {
+    pub version: String,
+    pub branch: Option<String>,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct PersistentProjectsFile<T> {

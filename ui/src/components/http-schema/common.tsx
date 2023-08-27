@@ -1,3 +1,6 @@
+import diff from "fast-diff";
+import { ReactElement } from "react";
+
 export enum PrimaryOperation {
   Same = "s",
   Added = "a",
@@ -11,11 +14,6 @@ export enum DiffResultIs {
   Added = "+",
   Updated = "~",
   Removed = "-",
-}
-
-export enum DiffResultUpdateIs {
-  New = "n",
-  Change = "c",
 }
 
 export enum MayBeRefDiffIs {
@@ -42,13 +40,57 @@ export type DiffResultNull = {
 
 export type DiffResultUpdated<T> = {
   t: DiffResultIs.Updated;
-  v: [T, T | null];
+  v: [T] | [T, T];
 };
 
 export type DiffResult<T> =
   | DiffResultValue<T>
   | DiffResultUpdated<T>
   | DiffResultNull;
+
+export function textDiffRaw(oldValue: string, newValue: string): any {
+  let result = diff(oldValue, newValue);
+
+  return (
+    <>
+      {result.map(([diff, value], idx) => {
+        let style = undefined;
+        if (diff === -1) {
+          style = { color: "red", textDecoration: "line-through" };
+        } else if (diff === 1) {
+          style = { color: "green" };
+        }
+        return (
+          <span key={idx} style={style}>
+            {value}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+export function textDiff(
+  field: DiffResult<string> | undefined,
+  primary: PrimaryOperation
+): ReactElement | undefined {
+  let [oldValue, same, newValue] = field
+    ? valueOfChange(field, primary)
+    : [null, null, null];
+
+  if (same) {
+    return <span>{same}</span>;
+  }
+
+  if (oldValue === null) {
+    return <span>{newValue}</span>;
+  }
+  if (newValue === null) {
+    return <span>{oldValue}</span>;
+  }
+
+  return textDiffRaw(oldValue, newValue);
+}
 
 export function apply<T>(
   parent: PrimaryOperation,
@@ -202,7 +244,7 @@ function _oldNewValues<T>(diff: DiffResult<T>): [T | null, T | null] {
     case DiffResultIs.Removed:
       return [diff.v, null];
     case DiffResultIs.Updated:
-      return [diff.v[1], diff.v[0]];
+      return [diff.v[1] || null, diff.v[0]];
     case DiffResultIs.None:
       return [null, null];
   }

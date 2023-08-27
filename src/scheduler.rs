@@ -12,6 +12,10 @@ pub struct ProjectBody {
 }
 
 pub async fn schedule(host: &str, port: u16, interval: u64, force: bool) {
+    // Wait until system startup
+    // TODO: add healthcheck endpoint and use it here
+    tokio::time::sleep(Duration::from_secs(15)).await;
+
     let mut interval = tokio::time::interval(Duration::from_secs(interval * 60));
     loop {
         interval.tick().await;

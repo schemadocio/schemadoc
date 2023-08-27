@@ -31,7 +31,7 @@ export const SchemaAttribute: React.FC<SchemaAttributeProps> = ({
 
   let oldAttribute;
   if (attributeDiffResult.t === DiffResultIs.Updated) {
-    const old = attributeDiffResult.v[1];
+    const old = attributeDiffResult.v[1] || null;
     oldAttribute = old && valueOf(old);
   }
 

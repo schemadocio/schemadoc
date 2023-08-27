@@ -234,7 +234,7 @@ const HttpSchema: React.FC<HttpSchemaProps> = ({
         if (element) {
           element.classList.add("pathFocused");
 
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
 
           setTimeout(() => {
             element.classList.remove("pathFocused");

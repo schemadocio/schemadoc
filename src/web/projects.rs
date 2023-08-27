@@ -14,9 +14,13 @@ use crate::web::AppStateType;
 async fn list_projects_endpoint(state: web::Data<AppStateType>) -> impl Responder {
     let state = state.read().await;
 
-    let projects = state.projects.values().collect::<Vec<_>>();
+    let projects = state.projects
+        .values()
+        .collect::<Vec<_>>();
 
-    let out: Vec<_> = projects.into_iter().map(ProjectOut::from).collect();
+    let out: Vec<_> = projects.into_iter()
+        .map(ProjectOut::from)
+        .collect();
 
     json_response(StatusCode::OK, &out)
 }
@@ -44,17 +48,16 @@ async fn get_dependents_project_by_id_endpoint(
     let dependents = state
         .projects
         .values()
-        .filter_map(|p| {
-            p.dependencies.as_ref().map(|deps| {
-                deps.iter()
-                    .filter(|d| d.project == project.slug)
-                    .map(|d| Dependency {
-                        project: p.slug.clone(),
-                        version: d.version,
-                        breaking: d.breaking,
-                        outdated: d.outdated,
-                    })
-            })
+        .map(|p| {
+            p.dependencies.iter()
+                .filter(|d| d.project == project.slug)
+                .map(|d| Dependency {
+                    project: p.slug.clone(),
+                    branch: d.branch.clone(),
+                    version: d.version,
+                    breaking: d.breaking,
+                    outdated: d.outdated,
+                })
         })
         .flatten()
         .collect::<Vec<_>>();

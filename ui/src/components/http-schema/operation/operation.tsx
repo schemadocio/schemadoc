@@ -5,9 +5,9 @@ import { OperationDiff } from "../models";
 import { DerefParameterContext } from "../http-schema";
 
 import {
+  textDiff,
   DiffResult,
   getBgColor,
-  valueOf,
   valueOfApplied,
   PrimaryOperation,
 } from "../common";
@@ -43,14 +43,13 @@ export const Operation: React.FC<OperationProps> = ({
     return null;
   }
 
-  let description = operation.description && valueOf(operation.description);
   let descriptionBgColor = getBgColor(operation.description, operationPrimary);
 
   return (
     <Box>
-      {description && (
+      {operation.description && (
         <Text px={6} py={3} whiteSpace="pre-line" bgColor={descriptionBgColor}>
-          {description}
+          {textDiff(operation.description, operationPrimary)}
         </Text>
       )}
 

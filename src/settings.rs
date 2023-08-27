@@ -79,27 +79,31 @@ impl Settings {
         })
     }
 
-    pub(crate) fn url_to_version_server(
+    pub(crate) fn url_to_version(
         &self,
         project_slug: &ProjectSlug,
+        branch_name: &str,
         version_id: u32,
     ) -> String {
+        let branch_name = urlencoding::encode(branch_name);
         format!(
-            "{}/projects/{}/versions/{}",
-            self.frontend_origin, project_slug, version_id
+            "{}/projects/{}/branches/{}/versions/{}",
+            self.frontend_origin, project_slug, branch_name, version_id
         )
     }
 
-    pub(crate) fn url_to_version_client(
+    pub(crate) fn url_to_dependency_compare(
         &self,
         project_slug: &ProjectSlug,
         dep: &ProjectSlug,
+        src_branch_name: &str,
         src_version_id: u32,
+        tgt_branch_name: &str,
         tgt_version_id: u32,
     ) -> String {
         format!(
-            "{}/projects/{}/overview?dep={}&src={}&tgt={}",
-            self.frontend_origin, project_slug, dep, src_version_id, tgt_version_id
+            "{}/projects/{}/dependencies?dep={}&srcBranch={}&src={}&tgtBranch={}&tgt={}",
+            self.frontend_origin, project_slug, dep, src_branch_name, src_version_id, tgt_branch_name, tgt_version_id
         )
     }
 }

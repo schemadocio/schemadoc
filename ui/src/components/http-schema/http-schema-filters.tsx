@@ -138,7 +138,7 @@ const HttpSchemaFilters: React.FC<HttpSchemaFiltersProps> = ({
   };
 
   return (
-    <HStack m={2}>
+    <HStack my={2}>
       <Button
         variant={all ? "solid" : "ghost"}
         onClick={() => setAllFilter(!all)}
