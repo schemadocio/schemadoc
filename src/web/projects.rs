@@ -3,9 +3,9 @@ use actix_web::{error, get, post, web, Responder};
 use serde::Deserialize;
 use std::ops::DerefMut;
 
-use crate::settings::Settings;
 use crate::models::{Dependency, ProjectSlug};
 use crate::projects;
+use crate::settings::Settings;
 use crate::web::schema::{DependencyOut, ProjectOut};
 use crate::web::utils::json_response;
 use crate::web::AppStateType;
@@ -14,13 +14,9 @@ use crate::web::AppStateType;
 async fn list_projects_endpoint(state: web::Data<AppStateType>) -> impl Responder {
     let state = state.read().await;
 
-    let projects = state.projects
-        .values()
-        .collect::<Vec<_>>();
+    let projects = state.projects.values().collect::<Vec<_>>();
 
-    let out: Vec<_> = projects.into_iter()
-        .map(ProjectOut::from)
-        .collect();
+    let out: Vec<_> = projects.into_iter().map(ProjectOut::from).collect();
 
     json_response(StatusCode::OK, &out)
 }
@@ -48,8 +44,9 @@ async fn get_dependents_project_by_id_endpoint(
     let dependents = state
         .projects
         .values()
-        .map(|p| {
-            p.dependencies.iter()
+        .flat_map(|p| {
+            p.dependencies
+                .iter()
                 .filter(|d| d.project == project.slug)
                 .map(|d| Dependency {
                     project: p.slug.clone(),
@@ -59,7 +56,6 @@ async fn get_dependents_project_by_id_endpoint(
                     outdated: d.outdated,
                 })
         })
-        .flatten()
         .collect::<Vec<_>>();
 
     let body: Vec<_> = dependents.iter().map(DependencyOut::from).collect();

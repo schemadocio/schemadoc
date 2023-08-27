@@ -2,11 +2,11 @@ use std::ops::{Deref, DerefMut};
 
 use actix_web::http::StatusCode;
 use actix_web::web::Bytes;
-use actix_web::{error, get, post, web, HttpRequest, Responder, HttpResponse};
+use actix_web::{error, get, post, web, HttpRequest, HttpResponse, Responder};
 use schemadoc_diff::schema_diff::HttpSchemaDiff;
 
-use crate::settings::Settings;
 use crate::models::ProjectSlug;
+use crate::settings::Settings;
 use crate::storage::Storer;
 use crate::versions::{crud, services, statistics};
 use crate::web::schema::VersionOut;
@@ -71,23 +71,29 @@ async fn add_version_endpoint(
         project_slug,
         branch_base_name,
         branch_base_version_id,
-    ).await
-        .map_err(|e| error::ErrorBadRequest(e))?;
+    )
+    .await
+    .map_err(error::ErrorBadRequest)?;
 
     let version = {
         let state = state.deref_mut();
 
         crate::branches::create_branch(state, project_slug, branch_name, base)
             .await
-            .map_err(|e| error::ErrorBadRequest(e))?;
+            .map_err(error::ErrorBadRequest)?;
 
         let content = String::from_utf8_lossy(&bytes);
 
         services::create_version(
-            &settings, state, project_slug, branch_name, message, &content,
+            &settings,
+            state,
+            project_slug,
+            branch_name,
+            message,
+            &content,
         )
-            .await
-            .map_err(|e| error::ErrorInternalServerError(format!("Error creating version: {}", e)))?
+        .await
+        .map_err(|e| error::ErrorInternalServerError(format!("Error creating version: {}", e)))?
     };
 
     let result = version.as_ref().map(VersionOut::from);
@@ -122,17 +128,23 @@ async fn compare_two_versions_endpoint(
     let state = state.read().await;
 
     let compare_result = services::compare_versions(
-        &state, &project, src_branch_name, *src_id, tgt_branch_name, *tgt_id,
-    ).await
-        .map_err(|e| {
-            error::ErrorInternalServerError(format!("Error while comparing two versions: {}", e))
-        })?;
+        &state,
+        project,
+        src_branch_name,
+        *src_id,
+        tgt_branch_name,
+        *tgt_id,
+    )
+    .await
+    .map_err(|e| {
+        error::ErrorInternalServerError(format!("Error while comparing two versions: {}", e))
+    })?;
 
     let Some(diff) = compare_result.get() else {
         return Ok(HttpResponse::NoContent().finish());
     };
 
-    let statistics = statistics::get_diff_statistics(&diff);
+    let statistics = statistics::get_diff_statistics(diff);
 
     #[derive(serde::Serialize)]
     struct Response<'s> {
@@ -140,7 +152,10 @@ async fn compare_two_versions_endpoint(
         statistics: statistics::DiffStatistics,
     }
 
-    Ok(json_response(StatusCode::OK, &Response { diff, statistics }))
+    Ok(json_response(
+        StatusCode::OK,
+        &Response { diff, statistics },
+    ))
 }
 
 #[get("/{id}/diff")]

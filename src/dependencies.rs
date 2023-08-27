@@ -1,9 +1,8 @@
 use schemadoc_diff::checker::validate;
 
-use crate::versions;
 use crate::app_state::AppState;
 use crate::models::{Dependency, ProjectSlug};
-
+use crate::versions;
 
 pub async fn get_dependency<'s>(
     state: &'s AppState,
@@ -14,13 +13,13 @@ pub async fn get_dependency<'s>(
         return None;
     };
 
-    project.dependencies.iter()
+    project
+        .dependencies
+        .iter()
         .find(|v| &v.project == tgt_project_slug)
 }
 
-pub async fn setup_project_dependencies(
-    state: &mut AppState,
-) -> anyhow::Result<()> {
+pub async fn setup_project_dependencies(state: &mut AppState) -> anyhow::Result<()> {
     let slugs = state
         .projects
         .keys()
@@ -45,7 +44,9 @@ pub async fn update_dependent_projects(
 
     // collect dependencies state information
     for src_project in state.projects.values() {
-        let dependencies = src_project.dependencies.iter()
+        let dependencies = src_project
+            .dependencies
+            .iter()
             .enumerate()
             .filter_map(|(idx, d)| {
                 if &d.project != tgt_project_slug {
@@ -60,7 +61,8 @@ pub async fn update_dependent_projects(
                 } else {
                     Some((idx, d))
                 }
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
 
         if dependencies.is_empty() {
             continue;
@@ -70,22 +72,22 @@ pub async fn update_dependent_projects(
 
         for (idx, dependency) in dependencies.into_iter() {
             let (tgt_version_id, branch_name) = {
-                let versions = versions::crud::get_versions(
-                    state, tgt_project_slug, &dependency.branch,
-                );
+                let versions =
+                    versions::crud::get_versions(state, tgt_project_slug, &dependency.branch);
 
                 let Some(tgt_versions) = versions else {
                     continue;
                 };
 
                 if tgt_versions.is_empty() {
-                    eprintln!("Dependency latest version was not found for {} of {}", tgt_project_slug, src_project.slug);
+                    eprintln!(
+                        "Dependency latest version was not found for {} of {}",
+                        tgt_project_slug, src_project.slug
+                    );
                     continue;
                 }
 
-                let tgt_version = tgt_versions
-                    .last()
-                    .expect("At least one item must be");
+                let tgt_version = tgt_versions.last().expect("At least one item must be");
 
                 (tgt_version.id, dependency.branch.to_owned())
             };
@@ -99,7 +101,7 @@ pub async fn update_dependent_projects(
                     &branch_name,
                     tgt_version_id,
                 )
-                    .await?;
+                .await?;
 
                 diff.get().map(|diff| !validate(diff, &["*"]).is_empty())
             };
@@ -111,22 +113,25 @@ pub async fn update_dependent_projects(
     }
 
     // apply dependencies state updates
-    state_updates.into_iter()
+    state_updates
+        .into_iter()
         .for_each(|(slug, index, outdated, breaking)| {
             let Some(project) = state.projects.get_mut(&slug) else {
                 return;
             };
 
-            let Some((_, dependency)) = project.dependencies.iter_mut()
+            let Some((_, dependency)) = project
+                .dependencies
+                .iter_mut()
                 .enumerate()
-                .find(|(idx, _)| idx == &index) else {
+                .find(|(idx, _)| idx == &index)
+            else {
                 return;
             };
 
             dependency.outdated = outdated;
             dependency.breaking = breaking;
         });
-
 
     Ok(affected_project_slugs)
 }

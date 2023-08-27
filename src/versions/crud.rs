@@ -10,7 +10,9 @@ pub fn get_versions<'s>(
         return None;
     };
 
-    project.branches.iter()
+    project
+        .branches
+        .iter()
         .find(|b| b.name == branch_name)
         .map(|x| &x.versions)
 }
@@ -38,7 +40,9 @@ pub async fn delete_version(
         return Ok(false);
     };
 
-    let versions = project.branches.iter_mut()
+    let versions = project
+        .branches
+        .iter_mut()
         .find(|b| b.name == branch_name)
         .map(|x| &mut x.versions);
 

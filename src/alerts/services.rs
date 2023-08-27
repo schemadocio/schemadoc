@@ -2,12 +2,12 @@ use anyhow::anyhow;
 use serde_yaml::{Mapping, Value};
 
 use schemadoc_diff::checker::ValidationIssue;
-use schemadoc_diff::schema_diff::HttpSchemaDiff;
 use schemadoc_diff::exporters::{Exporter, Markdown};
+use schemadoc_diff::schema_diff::HttpSchemaDiff;
 
 use crate::alerts::{google_chats, slack};
-use crate::settings::Settings;
 use crate::models::{AlertKind, Project};
+use crate::settings::Settings;
 
 pub struct AlertInfo<'s> {
     pub markdown: Markdown,
@@ -27,9 +27,7 @@ pub async fn get_own_alerts_info<'s>(
         return Ok(vec![]);
     };
 
-    let version_url = settings.url_to_version(
-        &project.slug, branch_name, tgt_version_id,
-    );
+    let version_url = settings.url_to_version(&project.slug, branch_name, tgt_version_id);
 
     let mut info = Vec::new();
 
@@ -48,7 +46,7 @@ pub async fn get_own_alerts_info<'s>(
             ("Kind", project.kind.as_str()),
             ("Branch", branch_name),
         ]
-            .into();
+        .into();
 
         let breaking_only = matches!(alert.kind, AlertKind::Breaking);
         let markdown = diff.export(fields, &version_url, breaking_only, None, Some(validations));
@@ -90,15 +88,14 @@ pub async fn get_deps_alerts_info<'s>(
     let mut info = Vec::new();
 
     for dep in dep_projects {
-        let version_url =
-            settings.url_to_dependency_compare(
-                &dep.slug,
-                &project.slug,
-                src_branch_name,
-                src_version_id,
-                tgt_branch_name,
-                tgt_version_id,
-            );
+        let version_url = settings.url_to_dependency_compare(
+            &dep.slug,
+            &project.slug,
+            src_branch_name,
+            src_version_id,
+            tgt_branch_name,
+            tgt_version_id,
+        );
 
         for alert in &dep.alerts {
             if !alert.source.is_deps() {
@@ -120,7 +117,7 @@ pub async fn get_deps_alerts_info<'s>(
                 ("Dependency", project.name.as_str()),
                 ("Branch", tgt_branch_name),
             ]
-                .into();
+            .into();
 
             let breaking_only = matches!(alert.kind, AlertKind::Breaking);
             let markdown =

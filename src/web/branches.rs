@@ -1,7 +1,7 @@
-use std::ops::{Deref, DerefMut};
-use actix_web::{web, error, delete, post, HttpResponse};
 use actix_web::http::StatusCode;
+use actix_web::{delete, error, post, web, HttpResponse};
 use serde::Deserialize;
+use std::ops::{Deref, DerefMut};
 
 use crate::branches;
 use crate::web::utils::json_response;
@@ -30,12 +30,13 @@ async fn create_branch_endpoint(
         project_slug,
         body.base_name,
         body.base_version_id,
-    ).await
-        .map_err(|e| error::ErrorBadRequest(e))?;
+    )
+    .await
+    .map_err(error::ErrorBadRequest)?;
 
     let branch = branches::create_branch(state.deref_mut(), project_slug, &body.name, base)
         .await
-        .map_err(|e| error::ErrorBadRequest(e))?;
+        .map_err(error::ErrorBadRequest)?;
 
     Ok(json_response(StatusCode::CREATED, &branch))
 }
@@ -57,9 +58,9 @@ async fn delete_branch_endpoint(
 
     let force = query.force.unwrap_or(false);
 
-    branches::delete_branch(
-        state.deref_mut(), project_slug, branch_name, force, true,
-    ).await.map_err(|e| error::ErrorBadRequest(e))?;
+    branches::delete_branch(state.deref_mut(), project_slug, branch_name, force, true)
+        .await
+        .map_err(error::ErrorBadRequest)?;
 
     Ok(HttpResponse::NoContent())
 }

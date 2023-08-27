@@ -71,7 +71,9 @@ async fn update_datasource_status_endpoint(
         };
 
         let Some(status) = &mut data_source.status else {
-            return Err(error::ErrorInternalServerError("Datasource was not properly initialized"));
+            return Err(error::ErrorInternalServerError(
+                "Datasource was not properly initialized",
+            ));
         };
 
         if let Some(pull_enabled) = body.pull_enabled {

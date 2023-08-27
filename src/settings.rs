@@ -1,6 +1,6 @@
-use std::str::FromStr;
-use anyhow::anyhow;
 use crate::models::ProjectSlug;
+use anyhow::anyhow;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct Settings {
@@ -18,7 +18,7 @@ pub struct Settings {
 #[derive(PartialEq, Debug, Default)]
 pub enum PersistenceType {
     #[default]
-    Local
+    Local,
 }
 
 impl PersistenceType {
@@ -58,8 +58,8 @@ impl Settings {
             .map(|p| p.parse())
             .transpose()?
             .unwrap_or_default();
-        let persistence_config_path =
-            std::env::var("SD_PERSISTENCE_CONFIG_PATH").unwrap_or_else(|_| "./persistence".to_owned());
+        let persistence_config_path = std::env::var("SD_PERSISTENCE_CONFIG_PATH")
+            .unwrap_or_else(|_| "./persistence".to_owned());
 
         let pull_disable_after_attempt: u32 = std::env::var("SD_PULL_DISABLE_AFTER_ATTEMPT")
             .unwrap_or_else(|_| "0".to_owned())
@@ -103,7 +103,13 @@ impl Settings {
     ) -> String {
         format!(
             "{}/projects/{}/dependencies?dep={}&srcBranch={}&src={}&tgtBranch={}&tgt={}",
-            self.frontend_origin, project_slug, dep, src_branch_name, src_version_id, tgt_branch_name, tgt_version_id
+            self.frontend_origin,
+            project_slug,
+            dep,
+            src_branch_name,
+            src_version_id,
+            tgt_branch_name,
+            tgt_version_id
         )
     }
 }

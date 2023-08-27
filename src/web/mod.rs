@@ -1,9 +1,9 @@
+mod branches;
 mod common;
 mod datasources;
 mod projects;
 mod schema;
 mod utils;
-mod branches;
 mod versions;
 
 use actix_cors::Cors;
@@ -13,13 +13,13 @@ use actix_web::web::PayloadConfig;
 use actix_web::{error, middleware, web, App, HttpResponse, HttpServer};
 use tokio::sync::RwLock;
 
-use crate::settings::Settings;
 use crate::app_state::AppState;
+use crate::settings::Settings;
+use crate::web::branches::get_branches_api_scope;
 use crate::web::common::get_common_api_scope;
+use crate::web::datasources::get_datasource_api_scope;
 use crate::web::projects::get_projects_api_scope;
 use crate::web::versions::get_versions_api_scope;
-use crate::web::branches::get_branches_api_scope;
-use crate::web::datasources::get_datasource_api_scope;
 
 pub type AppStateType = RwLock<AppState>;
 
@@ -81,9 +81,9 @@ pub async fn serve(host: &str, port: u16) -> anyhow::Result<()> {
             )
             .service(get_ui_service(&settings))
     })
-        .bind((host, port))?
-        .run()
-        .await?;
+    .bind((host, port))?
+    .run()
+    .await?;
 
     Ok(())
 }

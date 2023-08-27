@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
-use crate::settings::Settings;
 use crate::models::{DataSourceSource, ProjectSlug};
+use crate::settings::Settings;
 use crate::versions;
 use anyhow::anyhow;
 use chrono::{Duration, Utc};
@@ -12,7 +12,7 @@ pub async fn pull_project_datasource(
     force: bool,
 ) -> anyhow::Result<()> {
     let (content, branch_name) = {
-        let Some(project) = state.projects.get_mut(project_slug)else {
+        let Some(project) = state.projects.get_mut(project_slug) else {
             return Err(anyhow!("Project not found"));
         };
 
@@ -78,8 +78,14 @@ pub async fn pull_project_datasource(
     if let Some(content) = content {
         let message = Some("Pull from datasource".to_owned());
         versions::services::create_version(
-            settings, state, project_slug, &branch_name, message, &content,
-        ).await?;
+            settings,
+            state,
+            project_slug,
+            &branch_name,
+            message,
+            &content,
+        )
+        .await?;
     }
 
     Ok(())

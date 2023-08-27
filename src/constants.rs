@@ -1,1 +1,1 @@
-pub const BRANCH_DEFAULT_NAME: &'static str = "main";
+pub const BRANCH_DEFAULT_NAME: &str = "main";

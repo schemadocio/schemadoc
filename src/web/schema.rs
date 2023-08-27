@@ -1,7 +1,10 @@
-use crate::models::{Alert, AlertKind, AlertSource, DataSource, DataSourceSource, DataSourceStatus, Dependency, Link, Project, ProjectSlug, Version};
+use crate::models::{
+    Alert, AlertKind, AlertSource, DataSource, DataSourceSource, DataSourceStatus, Dependency,
+    Link, Project, ProjectSlug, Version,
+};
+use crate::versions::statistics::DiffStatistics;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use crate::versions::statistics::DiffStatistics;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -137,13 +140,9 @@ pub struct ProjectOut<'s> {
 
 impl<'s> From<&'s Project> for ProjectOut<'s> {
     fn from(project: &'s Project) -> ProjectOut<'s> {
-        let alerts = project.alerts.iter()
-            .map(AlertOut::from)
-            .collect();
+        let alerts = project.alerts.iter().map(AlertOut::from).collect();
 
-        let branches = project.branches.iter()
-            .map(|b| b.name.clone())
-            .collect();
+        let branches = project.branches.iter().map(|b| b.name.clone()).collect();
 
         Self {
             alerts,
@@ -154,7 +153,11 @@ impl<'s> From<&'s Project> for ProjectOut<'s> {
             links: project.links.as_ref(),
             description: project.description.as_deref(),
             data_source: project.data_source.as_ref().map(DataSourceOut::from),
-            dependencies: project.dependencies.iter().map(DependencyOut::from).collect(),
+            dependencies: project
+                .dependencies
+                .iter()
+                .map(DependencyOut::from)
+                .collect(),
         }
     }
 }

@@ -1,9 +1,9 @@
-use std::cell::Cell;
-use serde::{Deserialize, Serialize};
 use schemadoc_diff::core::DiffResult;
 use schemadoc_diff::path_pointer::PathPointer;
 use schemadoc_diff::schema_diff::{HttpSchemaDiff, OperationDiff};
-use schemadoc_diff::visitor::{DiffVisitor, dispatch_visitor};
+use schemadoc_diff::visitor::{dispatch_visitor, DiffVisitor};
+use serde::{Deserialize, Serialize};
+use std::cell::Cell;
 
 struct StatisticsVisitor {
     total: Cell<u32>,
@@ -36,7 +36,6 @@ impl<'s> DiffVisitor<'s> for StatisticsVisitor {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DiffStatistics {
     pub total: u32,
@@ -44,7 +43,6 @@ pub struct DiffStatistics {
     pub removed: u32,
     pub updated: u32,
 }
-
 
 pub fn get_diff_statistics(diff: &HttpSchemaDiff) -> DiffStatistics {
     let visitor = StatisticsVisitor {
@@ -105,7 +103,8 @@ mod test {
             }
         "#;
 
-        let (src_schema, tgt_schema) = schemadoc_diff::try_deserialize_schema(src_content, tgt_content).unwrap();
+        let (src_schema, tgt_schema) =
+            schemadoc_diff::try_deserialize_schema(src_content, tgt_content).unwrap();
 
         let diff = schemadoc_diff::get_schema_diff(src_schema, tgt_schema);
 

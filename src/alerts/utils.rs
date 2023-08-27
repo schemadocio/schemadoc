@@ -35,9 +35,6 @@ mod tests {
         let message = "q\nwr\nert\nfg\nzs";
         let blocks = get_message_chunks(message, 5);
 
-        assert_eq!(
-            *blocks,
-            ["q\nwr\n", "ert\n", "fg\nzs"]
-        )
+        assert_eq!(*blocks, ["q\nwr\n", "ert\n", "fg\nzs"])
     }
 }

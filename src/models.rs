@@ -1,11 +1,11 @@
-use std::fmt;
-use serde_yaml::Value;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_yaml::Value;
+use std::fmt;
 
+use crate::persistence::{load_data_file, persist_data_file, PersistentDataFile, Versioned};
 use crate::storage::Storer;
 use crate::versions::statistics::DiffStatistics;
-use crate::persistence::{load_data_file, persist_data_file, PersistentDataFile, Versioned};
 
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Slug(String);
@@ -67,19 +67,22 @@ pub struct Project {
     pub dependencies: Vec<Dependency>,
 }
 
-
 impl Project {
     pub async fn load_persistent_data<S>(&mut self, storage: &S) -> anyhow::Result<()>
-        where
-            S: Storer,
+    where
+        S: Storer,
     {
         let branches_file_path = format!("projects/{}/branches.yaml", self.slug);
-        self.branches = load_data_file::<Vec<Branch>, _, _, PersistentDataFile<_>>(storage, branches_file_path)
-            .await
-            .unwrap_or_default();
+        self.branches =
+            load_data_file::<Vec<Branch>, _, _, PersistentDataFile<_>>(storage, branches_file_path)
+                .await
+                .unwrap_or_default();
 
         if self.branches.is_empty() {
-            println!("{} - Add default branch: {} ", self.slug, self.default_branch);
+            println!(
+                "{} - Add default branch: {} ",
+                self.slug, self.default_branch
+            );
             self.branches.push(Branch {
                 name: self.default_branch.clone(),
                 versions: vec![],
@@ -92,9 +95,12 @@ impl Project {
         if let Some(data_source) = &mut self.data_source {
             let data_source_status_file_path = format!("projects/{}/datasource.yaml", self.slug);
             let data_source_status =
-                load_data_file::<DataSourceStatus, _, _, PersistentDataFile<_>>(storage, data_source_status_file_path)
-                    .await
-                    .unwrap_or_default();
+                load_data_file::<DataSourceStatus, _, _, PersistentDataFile<_>>(
+                    storage,
+                    data_source_status_file_path,
+                )
+                .await
+                .unwrap_or_default();
 
             data_source.status = Some(data_source_status);
         }
@@ -103,18 +109,23 @@ impl Project {
     }
 
     pub async fn persist_branches<S>(&self, storage: &S) -> anyhow::Result<()>
-        where
-            S: Storer,
+    where
+        S: Storer,
     {
         let path = format!("projects/{}/branches.yaml", self.slug);
-        persist_data_file::<Vec<Branch>, _, _, PersistentDataFile<_>>(storage, path, &self.branches).await?;
+        persist_data_file::<Vec<Branch>, _, _, PersistentDataFile<_>>(
+            storage,
+            path,
+            &self.branches,
+        )
+        .await?;
 
         Ok(())
     }
 
     pub async fn persist_datasource<S>(&self, storage: &S) -> anyhow::Result<()>
-        where
-            S: Storer,
+    where
+        S: Storer,
     {
         let Some(data_source) = &self.data_source else {
             return Ok(());
@@ -125,7 +136,12 @@ impl Project {
         };
 
         let path = format!("projects/{}/datasource.yaml", self.slug);
-        persist_data_file::<DataSourceStatus, _, _, PersistentDataFile<_>>(storage, path, data_source_status).await?;
+        persist_data_file::<DataSourceStatus, _, _, PersistentDataFile<_>>(
+            storage,
+            path,
+            data_source_status,
+        )
+        .await?;
 
         Ok(())
     }
@@ -156,7 +172,6 @@ impl ProjectKind {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Branch {
     pub name: String,
@@ -170,13 +185,11 @@ pub struct BranchBase {
     pub version_id: u32,
 }
 
-
 impl Versioned for Vec<Branch> {
     fn latest() -> &'static str {
         "0.1"
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Dependency {
@@ -208,10 +221,10 @@ impl Alert {
     pub fn includes_branch(&self, branch: &str, default_branch: &str) -> bool {
         if self.branches.is_empty() && branch == default_branch {
             true
-        } else if self.branches.iter().any(|b| b.as_str() == "*" || b.as_str() == branch) {
-            true
         } else {
-            false
+            self.branches
+                .iter()
+                .any(|b| b.as_str() == "*" || b.as_str() == branch)
         }
     }
 }
@@ -302,7 +315,6 @@ impl Versioned for DataSourceStatus {
         "0.1"
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Link {

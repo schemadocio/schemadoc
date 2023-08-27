@@ -1,9 +1,9 @@
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use anyhow::bail;
 use chrono::Utc;
 use regex::Regex;
 use sha2::{Digest, Sha256};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 use schemadoc_diff::checker::validate;
 use schemadoc_diff::core::DiffResult;
@@ -15,7 +15,6 @@ use crate::storage::Storer;
 
 use crate::models::{ProjectSlug, Version};
 use crate::{alerts, branches, dependencies, versions};
-
 
 pub struct CreatedVersion {
     pub version: Version,
@@ -44,10 +43,7 @@ async fn create_version_inner(
     let diff = match src_version.as_ref() {
         Some(src_version) => {
             let src_schema_content = state.storage.read_file(&src_version.file_path).await?;
-            compare_schemas_content(
-                &String::from_utf8_lossy(&src_schema_content),
-                content,
-            )?
+            compare_schemas_content(&String::from_utf8_lossy(&src_schema_content), content)?
         }
         None => {
             // For first version compare to itself
@@ -76,16 +72,17 @@ async fn create_version_inner(
             .await?;
     }
 
-    let next_id = branch.versions.iter()
+    let next_id = branch
+        .versions
+        .iter()
         .max_by_key(|v| v.id)
         .map(|v| &v.id + 1)
         .unwrap_or(0);
 
     let sanitized_branch_name = _sanitise_branch_name(branch_name);
 
-    let diff_file_path = format!(
-        "projects/{project_slug}/diffs/{sanitized_branch_name}/{next_id}.json"
-    );
+    let diff_file_path =
+        format!("projects/{project_slug}/diffs/{sanitized_branch_name}/{next_id}.json");
 
     state
         .storage
@@ -116,9 +113,7 @@ async fn create_version_inner(
 
     project.persist_branches(&state.storage).await?;
 
-    let src_version_id = src_version.as_ref()
-        .map(|lv| lv.id)
-        .unwrap_or(next_id);
+    let src_version_id = src_version.as_ref().map(|lv| lv.id).unwrap_or(next_id);
 
     Ok(Some(CreatedVersion {
         diff,
@@ -128,7 +123,11 @@ async fn create_version_inner(
     }))
 }
 
-fn get_source_version<'s>(state: &'s AppState, project_slug: &ProjectSlug, branch_name: &str) -> anyhow::Result<(String, Option<Version>)> {
+fn get_source_version(
+    state: &AppState,
+    project_slug: &ProjectSlug,
+    branch_name: &str,
+) -> anyhow::Result<(String, Option<Version>)> {
     let Some(project) = state.projects.get(project_slug) else {
         bail!("Project versions not found")
     };
@@ -137,28 +136,32 @@ fn get_source_version<'s>(state: &'s AppState, project_slug: &ProjectSlug, branc
         bail!("Project branch not found")
     };
     // Use latest version from branch as source version
-    let src_version = branch.versions
-        .iter()
-        .max_by_key(|v| v.id);
+    let src_version = branch.versions.iter().max_by_key(|v| v.id);
 
     if src_version.is_some() {
-        return Ok((branch.name.clone(), src_version.map(|v| v.clone())));
+        return Ok((branch.name.clone(), src_version.cloned()));
     }
     // Use version specified as branch base version from base branch
 
-
-    let Some(base) = &branch.base  else {
+    let Some(base) = &branch.base else {
         return Ok((branch.name.clone(), None));
     };
 
     let Some(base_branch) = branches::get_branch(project, &base.name) else {
-        bail!("Base branch {} not found for {}/{}", base.name, project_slug, branch_name)
+        bail!(
+            "Base branch {} not found for {}/{}",
+            base.name,
+            project_slug,
+            branch_name
+        )
     };
 
-    let base_version = base_branch.versions.iter()
+    let base_version = base_branch
+        .versions
+        .iter()
         .find(|v| v.id == base.version_id);
 
-    Ok((base_branch.name.clone(), base_version.map(|v| v.clone())))
+    Ok((base_branch.name.clone(), base_version.cloned()))
 }
 
 pub async fn create_version(
@@ -169,18 +172,14 @@ pub async fn create_version(
     message: Option<String>,
     content: &str,
 ) -> anyhow::Result<Option<Version>> {
-    let result = create_version_inner(
-        state, project_slug, branch_name, message, content,
-    ).await?;
+    let result = create_version_inner(state, project_slug, branch_name, message, content).await?;
 
     let Some(result) = result else {
         return Ok(None);
     };
 
     let src_projects_slugs =
-        dependencies::update_dependent_projects(
-            state, project_slug, Some(branch_name),
-        ).await?;
+        dependencies::update_dependent_projects(state, project_slug, Some(branch_name)).await?;
 
     //handle alerts
     let project = state
@@ -192,15 +191,15 @@ pub async fn create_version(
 
     // own alerts
     if !project.alerts.is_empty() {
-        let alerts =
-            alerts::get_own_alerts_info(
-                settings,
-                project,
-                branch_name,
-                result.version.id,
-                &result.diff,
-                &validations,
-            ).await?;
+        let alerts = alerts::get_own_alerts_info(
+            settings,
+            project,
+            branch_name,
+            result.version.id,
+            &result.diff,
+            &validations,
+        )
+        .await?;
         for alert in alerts {
             println!("Send own alert: {}", alert.service);
             alerts::send_alert(alert).await?;
@@ -223,7 +222,8 @@ pub async fn create_version(
             dep_projects,
             &result.diff,
             &validations,
-        ).await?;
+        )
+        .await?;
 
         for alert in alerts {
             println!("Send deps alert: {}", alert.service);
@@ -233,7 +233,6 @@ pub async fn create_version(
 
     Ok(Some(result.version))
 }
-
 
 pub async fn compare_versions(
     state: &AppState,
@@ -261,7 +260,6 @@ pub async fn compare_versions(
     Ok(diff)
 }
 
-
 pub fn compare_schemas_content(
     src_schema_content: &str,
     tgt_schema_content: &str,
@@ -273,7 +271,6 @@ pub fn compare_schemas_content(
 
     Ok(diff)
 }
-
 
 fn _sanitise_branch_name<S: Into<String>>(input: S) -> String {
     let input = input.into();
@@ -296,9 +293,18 @@ mod tests {
     #[test]
     fn test_encode_branch_name() {
         let values = vec![
-            ("feat: ad:d new functions123", "feat--ad-d-new-functions123-3847141747850018672"),
-            ("feat/ Add New+Functions", "feat--Add-New-Functions-17811559900772270264"),
-            ("feat /Add New:Functions", "feat--Add-New-Functions-7569046335700543031"),
+            (
+                "feat: ad:d new functions123",
+                "feat--ad-d-new-functions123-3847141747850018672",
+            ),
+            (
+                "feat/ Add New+Functions",
+                "feat--Add-New-Functions-17811559900772270264",
+            ),
+            (
+                "feat /Add New:Functions",
+                "feat--Add-New-Functions-7569046335700543031",
+            ),
         ];
 
         for (input, result) in values {

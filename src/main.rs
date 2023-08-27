@@ -1,13 +1,13 @@
 pub mod alerts;
 pub mod app_state;
-pub mod settings;
+pub mod branches;
+pub mod constants;
 pub mod dependencies;
 pub mod models;
 pub mod persistence;
 pub mod projects;
 pub mod scheduler;
-pub mod branches;
-pub mod constants;
+pub mod settings;
 pub mod storage;
 pub mod versions;
 pub mod web;
