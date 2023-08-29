@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 
 use actix_web::http::StatusCode;
 use actix_web::web::Bytes;
@@ -66,21 +66,18 @@ async fn add_version_endpoint(
         .transpose()
         .map_err(error::ErrorBadRequest)?;
 
-    let base = crate::branches::get_branch_base(
-        state.deref(),
-        project_slug,
-        branch_base_name,
-        branch_base_version_id,
-    )
-    .await
-    .map_err(error::ErrorBadRequest)?;
-
     let version = {
         let state = state.deref_mut();
 
-        crate::branches::create_branch(state, project_slug, branch_name, base)
-            .await
-            .map_err(error::ErrorBadRequest)?;
+        crate::branches::create_branch_if_not_exists(
+            state,
+            project_slug,
+            branch_name,
+            branch_base_name,
+            branch_base_version_id,
+        )
+        .await
+        .map_err(error::ErrorBadRequest)?;
 
         let content = String::from_utf8_lossy(&bytes);
 
@@ -123,17 +120,18 @@ async fn compare_two_versions_endpoint(
     path: web::Path<(ProjectSlug, String, u32, String, u32)>,
     state: web::Data<AppStateType>,
 ) -> Result<impl Responder, error::Error> {
-    let (project, src_branch_name, src_id, tgt_branch_name, tgt_id) = path.as_ref();
+    let (project_slug, src_branch_name, src_version_id, tgt_branch_name, tgt_version_id) =
+        path.as_ref();
 
     let state = state.read().await;
 
     let compare_result = services::compare_versions(
         &state,
-        project,
+        project_slug,
         src_branch_name,
-        *src_id,
+        *src_version_id,
         tgt_branch_name,
-        *tgt_id,
+        *tgt_version_id,
     )
     .await
     .map_err(|e| {

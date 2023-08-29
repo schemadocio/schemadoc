@@ -2,7 +2,7 @@ use crate::constants;
 use anyhow::bail;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::dependencies::setup_project_dependencies;
 use crate::models::{
@@ -28,13 +28,13 @@ impl AppState {
             bail!("Persistence {:?} not supported", settings.persistence)
         };
 
-        let config_storage = if settings.persistence == settings.persistence_config
-            && settings.persistence_path == settings.persistence_config_path
+        let config_storage = if settings.persistence == settings.config_persistence
+            && settings.persistence_path == settings.config_persistence_path
         {
             None
         } else {
-            let storage = if settings.persistence_config.is_local() {
-                Storage::Local(LocalStorage::new(&settings.persistence_config_path))
+            let storage = if settings.config_persistence.is_local() {
+                Storage::Local(LocalStorage::new(&settings.config_persistence_path))
             } else {
                 bail!("Persistence {:?} not supported", settings.persistence)
             };
@@ -49,7 +49,7 @@ impl AppState {
             config_storage.as_ref().unwrap_or(&storage),
             "schemadoc.yaml",
         )
-        .await?;
+            .await?;
 
         let default_branches: HashMap<_, _> = state_data
             .0
@@ -77,10 +77,10 @@ impl AppState {
                 let dependencies = config.dependencies.map(|deps| {
                     deps.into_iter()
                         .filter_map(|(project, def)| {
-                            let Some(branch) = default_branches.get(&project).map(|x| x.to_owned())
-                            else {
-                                return None;
-                            };
+                            let Some(branch) = default_branches.get(&project).cloned()
+                                else {
+                                    return None;
+                                };
 
                             let dependency = if let Ok(version) =
                                 serde_yaml::from_value::<u32>(def.clone())
@@ -141,17 +141,24 @@ impl AppState {
                     })
                     .unwrap_or_default();
 
-                let data_source = config.data_source.map(|ds| DataSource {
-                    status: None,
-                    name: ds.name,
-                    source: ds.source,
-                    branch: ds.branch.unwrap_or(default_branch.clone()),
-                });
+                let data_sources = config
+                    .data_sources
+                    .map(|dsc| {
+                        dsc.into_iter()
+                            .map(|ds| DataSource {
+                                status: None,
+                                name: ds.name,
+                                source: ds.source,
+                                branch: ds.branch.unwrap_or(default_branch.clone()),
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
 
                 let project = Project {
                     kind,
                     alerts,
-                    data_source,
+                    data_sources,
                     default_branch,
                     branches: vec![],
                     slug: slug.clone(),
@@ -164,6 +171,11 @@ impl AppState {
                 (slug, project)
             })
             .collect();
+
+        // validate
+        for project in projects.values() {
+            validate_project(project)?;
+        }
 
         for project in projects.values_mut() {
             project.load_persistent_data(&storage).await?;
@@ -199,10 +211,28 @@ pub struct ProjectConfig {
     pub links: Option<Vec<Link>>,
 
     pub alerts: Option<Vec<AlertConfig>>,
-    pub data_source: Option<DataSourceConfig>,
+    pub data_sources: Option<Vec<DataSourceConfig>>,
     pub dependencies: Option<IndexMap<ProjectSlug, serde_yaml::Value>>,
 
     pub default_branch: Option<String>,
+}
+
+fn validate_project(project: &Project) -> anyhow::Result<()> {
+    let unique_data_sources_count = project
+        .data_sources
+        .iter()
+        .map(|ds| &ds.branch)
+        .collect::<HashSet<_>>()
+        .len();
+    if project.data_sources.len() != unique_data_sources_count {
+        bail!(
+            "Improperly configured: {} datasources must have unique `branch` field \
+             and only one datasource allowed to have unset `branch` or set to null",
+            project.slug,
+        );
+    }
+
+    Ok(())
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

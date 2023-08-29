@@ -1,6 +1,6 @@
 # SchemaDoc
 
-## 🚧🚧🚧 WIP (work-in-progress) 🚧🚧🚧
+## WIP (work-in-progress)
 
 SchemaDoc is an open-source project that allows you to compare OpenAPI schemas and visualize the results in a
 Swagger-like manner. It provides a convenient way to track changes between different versions of OpenAPI schemas and
@@ -10,11 +10,13 @@ identify breaking changes.
 
 ## Features
 
-- **Project and Versions**: You can create projects and manage multiple versions of OpenAPI schemas within each project.
-  This enables you to track changes over time and compare different versions easily.
+- **Projects, Branches and Versions**: You can create projects and manage multiple versions of OpenAPI schemas within
+  each project.
+  As well as you can create branches for different development paths, ensuring that your API's evolution is
+  well-structured and organized.
 - **Data Sources**: SchemaDoc supports configuring data sources to pull OpenAPI schemas from. Currently, it only
-  supports
-  basic URL GET requests. You can specify the URL from which the schema should be fetched.
+  supports basic URL GET requests. You can specify the URL from which the schema should be fetched and branch where the
+  load retrieved schema
 - **Scheduled Data Pulling**: SchemaDoc allows you to schedule the pulling of OpenAPI schemas from the configured data
   sources. By default, it pulls the data every 5 minutes, ensuring that you always have the most up-to-date information.
 - **Breaking Changes**: SchemaDoc calculates breaking changes between different versions of OpenAPI schemas. It helps
@@ -22,15 +24,15 @@ identify breaking changes.
   identify modifications that may cause compatibility issues with existing clients.
 - **Alerts**: You can configure alerts to receive notifications about schema changes. SchemaDoc supports sending summary
   alerts to Slack or Google Chat. There are two kinds of alerts available:
-  - **all**: Send an alert for any change detected in the schema.
-  - **breaking**: Send an alert only if there are breaking changes in the schema.
+    - **all**: Send an alert for any change detected in the schema.
+    - **breaking**: Send an alert only if there are breaking changes in the schema.
 - **File-based Storage**: SchemaDoc does not require a database. It stores all data in files, making it easy to set up
   and
   deploy.
 - **Dependencies**: SchemaDoc supports specifying dependencies between projects. This allows you to track how changes in
   one project may impact the other.
 
-## Configuration (schemadoc.yaml)
+## Configuration (`schemadoc.yaml`)
 
 The configuration file for SchemaDoc (schemadoc.yaml) follows the structure below:
 
@@ -49,9 +51,13 @@ projects:
         service: Slack
         service_config:
           hook: https://hooks.slack.com/services/ABCDEFGHIJK/123456789/A1B2C3D4e5f6
-    data_source:
-      name: Stripe Github raw
-      source: !Url { url: https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json }
+    data_sources:
+      - name: Stripe Github raw
+        source: !Url { url: https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json }
+      - name: Stripe dev
+        branch: development
+        source: !Url { url: https://raw.githubusercontent.com/stripe/openapi/trigger/openapi/spec3.json }
+
     links:
       - name: API Reference
         url: https://stripe.com/docs/api
@@ -60,7 +66,7 @@ projects:
     name: Stripe Python Client
     kind: client
     dependencies: # Could be set for both kind=`server` and `client`
-      stripe: 0
+      stripe: 1 # Versions ids are autoincremented 0, 1, 2, ...
 ```
 
 In this configuration file, you can define multiple projects under the data section. Each project has a unique slug,
@@ -73,9 +79,101 @@ Currently, only basic HTTP GET requests are supported. You can provide the name 
 There are two kinds of projects `server` and `client`, they differ only visually on UI. Client does not have
 versions and overview page shows the client dependencies.
 
+## Limitations
+
+At the moment these parts are not implemented or are partially implemented:
+
+- **OpenAPI**: `info`, `tags`, `webhooks`, `links`, `servers`, `security`, parts from OpenAPI 3.1, ...
+- **Breaking Changes** are not displayed and are only used internally in alerts with `kind=breaking`
+- **Persistence** only for OS file system supported for now
+- **Modifications** for now do not require any authorization, and could be called by anyone who has access to modifying
+  endpoints.
+
 ## Getting Started
 
-#### TODO
+### TODO
+
+## Configuration schema (`schemadoc.yaml`)
+
+## Environment variables
+
+| Variable                        | Default         | Description                                                               |
+|---------------------------------|-----------------|---------------------------------------------------------------------------|
+| `SD_PERSISTENCE`                | `local`         | Persistence type, one of [`local`]                                        |
+| `SD_PERSISTENCE_PATH`           | `./persistence` | Path to load and store persistent data in selected persistence            |
+| `SD_CONFIG_PERSISTENCE`         | `local`         | Persistence type for `schemadoc.yaml`, one of [`local`]                   |
+| `SD_CONFIG_PERSISTENCE_PATH`    | `./persistence` | Path to read `schemadoc.yaml` in selected config persistence              |
+| `SD_PULL_DISABLE_AFTER_ATTEMPT` | `0`             | After how many errors to disable datasource pulling, `0` - do not disable |
+
+## Modifying Endpoints
+
+### `POST /api/v1/projects/{slug}/branches/{name}/versions`
+
+Add new version to the specified project branch.
+
+**Parameters:**
+
+| name                       | in     | type             | description                                                          |
+|----------------------------|--------|------------------|----------------------------------------------------------------------|
+| `slug`                     | path   | `string`         | Project slug                                                         |
+| `name`                     | path   | `string`         | Branch name                                                          |
+|                            | body   | `json`           | Schema content in json                                               |
+| `X-Message`                | header | `string \| null` | Version description                                                  |
+| `X-Branch-Base-Name`       | header | `string \| null` | Base name of new branch if the branch `name` does not exist          |
+| `X-Branch-Base-Version-Id` | header | `string \| null` | Version id from base branch from which the new branch will be forked |
+
+**Response:**
+
+- `201 Created`: returns new version data if it was created, and returns `null` if the version has no changes
+  compared to previous one and thus was not actually created
+
+### `POST /api/v1/projects/{slug}/branches`
+
+Creates new branch
+
+**Parameters:**
+
+| name            | in   | type             | description                                                          |
+|-----------------|------|------------------|----------------------------------------------------------------------|
+| `slug`          | path | `string`         | Project slug                                                         |
+| `name`          | body | `string`         | Branch name to create                                                |
+| `baseName`      | body | `string \| null` | Base branch name, if `null` then project's default branch used       |
+| `baseVersionId` | body | `number \| null` | Version id from base branch from which the new branch will be forked |
+
+**Response:**
+
+- `201 Created`: returns new branch data if it was created, and `null` if it is already exists
+
+### `DELETE /api/v1/projects/{slug}/branches/{name}`
+
+Removes branch and all its versions
+
+**Parameters:**
+
+| name    | in    | type           | description                                           |
+|---------|-------|----------------|-------------------------------------------------------|
+| `slug`  | path  | `string`       | Project slug                                          |
+| `name`  | path  | `string`       | Branch name to remove                                 |
+| `force` | query | `bool \| null` | If `true` then cascade remove all descenders branches |
+
+**Response:**
+
+- `204 No Content`
+
+### `POST /api/v1/projects/{slug}/pull`
+
+Pull enabled project datasources
+
+**Parameters:**
+
+| name    | in    | type           | description                                                               |
+|---------|-------|----------------|---------------------------------------------------------------------------|
+| `slug`  | path  | `string`       | Project slug                                                              |
+| `force` | query | `bool \| null` | If `true` then pull even if there is an active timeout for the datasource |
+
+**Response:**
+
+- `200 Ok`: Pulled
 
 ## Contributions
 

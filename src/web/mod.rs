@@ -1,6 +1,5 @@
 mod branches;
 mod common;
-mod datasources;
 mod projects;
 mod schema;
 mod utils;
@@ -17,7 +16,6 @@ use crate::app_state::AppState;
 use crate::settings::Settings;
 use crate::web::branches::get_branches_api_scope;
 use crate::web::common::get_common_api_scope;
-use crate::web::datasources::get_datasource_api_scope;
 use crate::web::projects::get_projects_api_scope;
 use crate::web::versions::get_versions_api_scope;
 
@@ -72,12 +70,11 @@ pub async fn serve(host: &str, port: u16) -> anyhow::Result<()> {
             .app_data(json_config)
             .app_data(payload_config)
             .service(
-                web::scope("/v1")
+                web::scope("/api/v1")
                     .service(get_common_api_scope())
                     .service(get_versions_api_scope())
                     .service(get_branches_api_scope())
-                    .service(get_projects_api_scope())
-                    .service(get_datasource_api_scope()),
+                    .service(get_projects_api_scope()),
             )
             .service(get_ui_service(&settings))
     })

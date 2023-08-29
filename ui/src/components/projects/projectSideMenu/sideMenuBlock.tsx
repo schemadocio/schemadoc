@@ -8,7 +8,7 @@ interface SideMenuBlockProps {
 }
 
 const SideMenuBlock: React.FC<SideMenuBlockProps> = ({ title, children }) => (
-  <Box p={2} borderRadius={5}>
+  <Box p={1} borderRadius={5}>
     <Text fontSize={12} color="gray.600" fontWeight="medium">
       {title}
     </Text>

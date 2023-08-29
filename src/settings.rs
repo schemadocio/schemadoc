@@ -11,8 +11,8 @@ pub struct Settings {
     pub(crate) persistence: PersistenceType,
     pub(crate) persistence_path: String,
 
-    pub(crate) persistence_config: PersistenceType,
-    pub(crate) persistence_config_path: String,
+    pub(crate) config_persistence: PersistenceType,
+    pub(crate) config_persistence_path: String,
 }
 
 #[derive(PartialEq, Debug, Default)]
@@ -53,12 +53,12 @@ impl Settings {
         let persistence_path =
             std::env::var("SD_PERSISTENCE_PATH").unwrap_or_else(|_| "./persistence".to_owned());
 
-        let persistence_config = std::env::var("SD_PERSISTENCE_CONFIG")
+        let config_persistence = std::env::var("SD_CONFIG_PERSISTENCE")
             .ok()
             .map(|p| p.parse())
             .transpose()?
             .unwrap_or_default();
-        let persistence_config_path = std::env::var("SD_PERSISTENCE_CONFIG_PATH")
+        let config_persistence_path = std::env::var("SD_CONFIG_PERSISTENCE_PATH")
             .unwrap_or_else(|_| "./persistence".to_owned());
 
         let pull_disable_after_attempt: u32 = std::env::var("SD_PULL_DISABLE_AFTER_ATTEMPT")
@@ -74,8 +74,8 @@ impl Settings {
             persistence,
             persistence_path,
 
-            persistence_config,
-            persistence_config_path,
+            config_persistence,
+            config_persistence_path,
         })
     }
 

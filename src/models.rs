@@ -1,6 +1,9 @@
+use crate::branches;
 use chrono::{DateTime, Utc};
+use schemadoc_diff::schema_diff::HttpSchemaDiff;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
+use sha2::{Digest, Sha256};
 use std::fmt;
 
 use crate::persistence::{load_data_file, persist_data_file, PersistentDataFile, Versioned};
@@ -63,7 +66,7 @@ pub struct Project {
 
     pub alerts: Vec<Alert>,
     pub branches: Vec<Branch>,
-    pub data_source: Option<DataSource>,
+    pub data_sources: Vec<DataSource>,
     pub dependencies: Vec<Dependency>,
 }
 
@@ -92,8 +95,14 @@ impl Project {
             self.persist_branches(storage).await?;
         }
 
-        if let Some(data_source) = &mut self.data_source {
-            let data_source_status_file_path = format!("projects/{}/datasource.yaml", self.slug);
+        for data_source in &mut self.data_sources {
+            let branch_name = branches::sanitise_branch_name(&data_source.branch);
+
+            let data_source_status_file_path = format!(
+                "projects/{}/branches/{}/datasource.yaml",
+                self.slug, branch_name,
+            );
+
             let data_source_status =
                 load_data_file::<DataSourceStatus, _, _, PersistentDataFile<_>>(
                     storage,
@@ -123,19 +132,25 @@ impl Project {
         Ok(())
     }
 
-    pub async fn persist_datasource<S>(&self, storage: &S) -> anyhow::Result<()>
+    pub async fn persist_datasource<S>(&self, storage: &S, branch_name: &str) -> anyhow::Result<()>
     where
         S: Storer,
     {
-        let Some(data_source) = &self.data_source else {
+        let Some(ds) = &self.data_sources.iter().find(|ds| ds.branch == branch_name) else {
             return Ok(());
         };
 
-        let Some(data_source_status) = &data_source.status else {
+        let Some(data_source_status) = &ds.status else {
             return Ok(());
         };
 
-        let path = format!("projects/{}/datasource.yaml", self.slug);
+        let branch_name = branches::sanitise_branch_name(branch_name);
+
+        let path = format!(
+            "projects/{}/branches/{branch_name}/datasource.yaml",
+            self.slug,
+        );
+
         persist_data_file::<DataSourceStatus, _, _, PersistentDataFile<_>>(
             storage,
             path,
@@ -144,6 +159,43 @@ impl Project {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn persist_version<S: Storer>(
+        &self,
+        storage: &S,
+        content: &str,
+    ) -> anyhow::Result<String> {
+        let hash = Sha256::digest(content);
+        // Write versions to shared folder, in that way we are caching them,
+        //  but someday we need to add check for collisions here
+        let file_path = format!("projects/{}/versions/{hash:x}.json", self.slug);
+        if !storage.exists(&file_path).await? {
+            storage.put_file(&file_path, content.as_bytes()).await?;
+        }
+
+        Ok(file_path)
+    }
+
+    pub async fn persist_version_diff<S: Storer>(
+        &self,
+        storage: &S,
+        branch_name: &str,
+        version_id: u32,
+        diff: &HttpSchemaDiff,
+    ) -> anyhow::Result<String> {
+        let branch_name = branches::sanitise_branch_name(branch_name);
+
+        let diff_file_path = format!(
+            "projects/{}/branches/{branch_name}/diffs/{version_id}.json",
+            self.slug,
+        );
+
+        storage
+            .put_file(&diff_file_path, &serde_json::to_vec(diff)?)
+            .await?;
+
+        Ok(diff_file_path)
     }
 }
 

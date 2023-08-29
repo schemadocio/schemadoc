@@ -1,7 +1,7 @@
 use actix_web::http::StatusCode;
 use actix_web::{delete, error, post, web, HttpResponse};
 use serde::Deserialize;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 
 use crate::branches;
 use crate::web::utils::json_response;
@@ -25,18 +25,15 @@ async fn create_branch_endpoint(
 
     let mut state = state.write().await;
 
-    let base = branches::get_branch_base(
-        state.deref(),
+    let branch = branches::create_branch_if_not_exists(
+        state.deref_mut(),
         project_slug,
+        &body.name,
         body.base_name,
         body.base_version_id,
     )
     .await
     .map_err(error::ErrorBadRequest)?;
-
-    let branch = branches::create_branch(state.deref_mut(), project_slug, &body.name, base)
-        .await
-        .map_err(error::ErrorBadRequest)?;
 
     Ok(json_response(StatusCode::CREATED, &branch))
 }

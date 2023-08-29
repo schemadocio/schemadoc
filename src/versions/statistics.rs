@@ -30,7 +30,6 @@ impl<'s> DiffVisitor<'s> for StatisticsVisitor {
         } else if pointer.is_removed() {
             self.removed.set(self.removed.get() + 1);
         }
-
         // do not go deeper
         false
     }

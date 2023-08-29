@@ -9,7 +9,7 @@ export interface Project {
 
   branches: string[];
 
-  dataSource: DataSource | null;
+  dataSources: DataSource[];
   dependencies: Dependency[];
 }
 
@@ -51,6 +51,7 @@ export interface DataSourceSource {
 
 export interface DataSource {
   name: string;
+  branch: string;
   source: DataSourceSource;
   status: DataSourceStatus | null;
 }

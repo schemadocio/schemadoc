@@ -86,6 +86,7 @@ impl From<&DataSourceStatus> for DataSourceStatusOut {
 #[serde(rename_all = "camelCase")]
 pub struct DataSourceOut<'s> {
     pub name: &'s str,
+    pub branch: &'s str,
     pub source: &'s DataSourceSource,
     pub status: Option<DataSourceStatusOut>,
 }
@@ -94,6 +95,7 @@ impl<'s> From<&'s DataSource> for DataSourceOut<'s> {
     fn from(data_source: &'s DataSource) -> DataSourceOut<'s> {
         Self {
             name: &data_source.name,
+            branch: &data_source.branch,
             source: &data_source.source,
             status: data_source.status.as_ref().map(DataSourceStatusOut::from),
         }
@@ -134,7 +136,7 @@ pub struct ProjectOut<'s> {
 
     pub branches: Vec<String>,
     pub alerts: Vec<AlertOut<'s>>,
-    pub data_source: Option<DataSourceOut<'s>>,
+    pub data_sources: Vec<DataSourceOut<'s>>,
     pub dependencies: Vec<DependencyOut<'s>>,
 }
 
@@ -152,7 +154,11 @@ impl<'s> From<&'s Project> for ProjectOut<'s> {
             kind: project.kind.as_str(),
             links: project.links.as_ref(),
             description: project.description.as_deref(),
-            data_source: project.data_source.as_ref().map(DataSourceOut::from),
+            data_sources: project
+                .data_sources
+                .iter()
+                .map(DataSourceOut::from)
+                .collect(),
             dependencies: project
                 .dependencies
                 .iter()

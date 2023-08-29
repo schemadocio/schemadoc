@@ -28,7 +28,9 @@ const ProjectListItem: React.FC<ProjectListItemProps> = ({
           <Text fontSize="0.8em" fontWeight="400" color="gray.700">
             {project.slug}
           </Text>
-          <Text fontSize="0.8em">{project.description}</Text>
+          <Text fontSize="0.8em" color="gray.700">
+            {project.description}
+          </Text>
         </Box>
       </Flex>
     </Link>

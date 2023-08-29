@@ -11,7 +11,7 @@ import LinksBlock from "./blocks/linksBlock";
 import AlertsBlock from "./blocks/alertsBlock";
 import UsedByBlock from "./blocks/usedByBlock";
 import DependsOnBlock from "./blocks/dependsOnBlock";
-import DataSourceBlock from "./blocks/dataSourceBlock";
+import DataSourcesBlock from "./blocks/dataSourcesBlock";
 
 interface ProjectSideMenuProps {
   project: Project;
@@ -60,7 +60,7 @@ const ProjectSideMenu: React.FC<ProjectSideMenuProps> = ({ project }) => {
           <SideMenuItem icon={BsList} text="Versions" to="versions" />
         )}
 
-        {project.kind === "server" && (
+        {project.kind === "server" && project.dependencies.length > 0 && (
           <SideMenuItem
             icon={BsDiagram2}
             text="Dependencies"
@@ -70,7 +70,7 @@ const ProjectSideMenu: React.FC<ProjectSideMenuProps> = ({ project }) => {
 
         <LinksBlock project={project} />
         <AlertsBlock project={project} />
-        {project.kind === "server" && <DataSourceBlock project={project} />}
+        {project.kind === "server" && <DataSourcesBlock project={project} />}
         <DependsOnBlock project={project} />
         <UsedByBlock project={project} />
       </VStack>

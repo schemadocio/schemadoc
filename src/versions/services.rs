@@ -1,9 +1,5 @@
 use anyhow::bail;
 use chrono::Utc;
-use regex::Regex;
-use sha2::{Digest, Sha256};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 
 use schemadoc_diff::checker::validate;
 use schemadoc_diff::core::DiffResult;
@@ -33,11 +29,11 @@ async fn create_version_inner(
     let (src_branch_name, src_version) = get_source_version(state, project_slug, branch_name)?;
 
     let Some(project) = state.projects.get_mut(project_slug) else {
-        bail!("Project versions not found")
+        bail!("Project {project_slug} not found")
     };
 
-    let Some(branch) = branches::get_branch_mut(project, branch_name) else {
-        bail!("Project branch not found")
+    let Some(branch) = branches::get_branch(project, branch_name) else {
+        bail!("Project branch {project_slug}/{branch_name} not found")
     };
 
     let diff = match src_version.as_ref() {
@@ -61,17 +57,6 @@ async fn create_version_inner(
              Probably two null schemas were provided.",
     );
 
-    let hash = Sha256::digest(content);
-    // Write versions to shared folder, in that way we are caching them,
-    //  but someday we need to add check for collisions here
-    let file_path = format!("projects/{project_slug}/versions/{hash:x}.json");
-    if !state.storage.exists(&file_path).await? {
-        state
-            .storage
-            .put_file(&file_path, content.as_bytes())
-            .await?;
-    }
-
     let next_id = branch
         .versions
         .iter()
@@ -79,22 +64,15 @@ async fn create_version_inner(
         .map(|v| &v.id + 1)
         .unwrap_or(0);
 
-    let sanitized_branch_name = _sanitise_branch_name(branch_name);
-
-    let diff_file_path =
-        format!("projects/{project_slug}/diffs/{sanitized_branch_name}/{next_id}.json");
-
-    state
-        .storage
-        .put_file(&diff_file_path, &serde_json::to_vec(&diff)?)
+    let diff_file_path = project
+        .persist_version_diff(&state.storage, branch_name, next_id, &diff)
         .await?;
+
+    let file_path = project.persist_version(&state.storage, content).await?;
 
     let diff_file_version = diff.get_diff_version();
 
-    let version = diff
-        .info
-        .get()
-        .and_then(|info| info.version.get().map(|v| v.to_owned()));
+    let version = diff.info.get().and_then(|info| info.version.get().cloned());
 
     let statistics = versions::statistics::get_diff_statistics(&diff);
 
@@ -109,11 +87,14 @@ async fn create_version_inner(
         created_at: Utc::now(),
     };
 
-    branch.versions.push(version.clone());
+    branches::get_branch_mut(project, branch_name)
+        .expect("Must be created before this version")
+        .versions
+        .push(version.clone());
 
     project.persist_branches(&state.storage).await?;
 
-    let src_version_id = src_version.as_ref().map(|lv| lv.id).unwrap_or(next_id);
+    let src_version_id = src_version.as_ref().map(|v| v.id).unwrap_or(next_id);
 
     Ok(Some(CreatedVersion {
         diff,
@@ -129,15 +110,14 @@ fn get_source_version(
     branch_name: &str,
 ) -> anyhow::Result<(String, Option<Version>)> {
     let Some(project) = state.projects.get(project_slug) else {
-        bail!("Project versions not found")
+        bail!("Project {project_slug} not found")
     };
 
     let Some(branch) = branches::get_branch(project, branch_name) else {
-        bail!("Project branch not found")
+        bail!("Project branch {project_slug}/{branch_name} not found")
     };
     // Use latest version from branch as source version
     let src_version = branch.versions.iter().max_by_key(|v| v.id);
-
     if src_version.is_some() {
         return Ok((branch.name.clone(), src_version.cloned()));
     }
@@ -201,7 +181,10 @@ pub async fn create_version(
         )
         .await?;
         for alert in alerts {
-            println!("Send own alert: {}", alert.service);
+            println!(
+                "Send own alert: {}/{} - {}",
+                project_slug, branch_name, alert.service
+            );
             alerts::send_alert(alert).await?;
         }
     };
@@ -226,7 +209,10 @@ pub async fn create_version(
         .await?;
 
         for alert in alerts {
-            println!("Send deps alert: {}", alert.service);
+            println!(
+                "Send deps alert: {}/{} - {}",
+                project_slug, branch_name, alert.service
+            );
             alerts::send_alert(alert).await?;
         }
     }
@@ -238,14 +224,24 @@ pub async fn compare_versions(
     state: &AppState,
     project_slug: &ProjectSlug,
     src_branch_name: &str,
-    src_id: u32,
+    src_version_id: u32,
     tgt_branch_name: &str,
-    tgt_id: u32,
+    tgt_version_id: u32,
 ) -> anyhow::Result<DiffResult<HttpSchemaDiff>> {
-    let src_version = versions::crud::get_version(state, project_slug, src_branch_name, src_id)
-        .ok_or(anyhow::Error::msg("Source version not found"))?;
-    let tgt_version = versions::crud::get_version(state, project_slug, tgt_branch_name, tgt_id)
-        .ok_or(anyhow::Error::msg("Target version not found"))?;
+    let src_version =
+        versions::crud::get_version(state, project_slug, src_branch_name, src_version_id).ok_or(
+            anyhow::Error::msg(format!(
+                "Source version {}/{}/{} not found",
+                project_slug, src_branch_name, src_version_id
+            )),
+        )?;
+    let tgt_version =
+        versions::crud::get_version(state, project_slug, tgt_branch_name, tgt_version_id).ok_or(
+            anyhow::Error::msg(format!(
+                "Target version {}/{}/{} not found",
+                project_slug, tgt_branch_name, tgt_version_id
+            )),
+        )?;
 
     let storage = &state.storage;
 
@@ -270,45 +266,4 @@ pub fn compare_schemas_content(
     let diff = schemadoc_diff::get_schema_diff(src_schema, tgt_schema);
 
     Ok(diff)
-}
-
-fn _sanitise_branch_name<S: Into<String>>(input: S) -> String {
-    let input = input.into();
-    let re = Regex::new(r"[^0-9a-zA-Z]").unwrap();
-    let replaced = re.replace_all(&input, "-").to_string();
-
-    // calculate input str hash
-    let mut s = DefaultHasher::new();
-    input.hash(&mut s);
-    let hash = s.finish();
-
-    // add hash suffix to replaced branch name
-    format!("{}-{}", replaced, hash)
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::versions::services::_sanitise_branch_name;
-
-    #[test]
-    fn test_encode_branch_name() {
-        let values = vec![
-            (
-                "feat: ad:d new functions123",
-                "feat--ad-d-new-functions123-3847141747850018672",
-            ),
-            (
-                "feat/ Add New+Functions",
-                "feat--Add-New-Functions-17811559900772270264",
-            ),
-            (
-                "feat /Add New:Functions",
-                "feat--Add-New-Functions-7569046335700543031",
-            ),
-        ];
-
-        for (input, result) in values {
-            assert_eq!(_sanitise_branch_name(input), result)
-        }
-    }
 }

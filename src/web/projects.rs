@@ -3,8 +3,8 @@ use actix_web::{error, get, post, web, Responder};
 use serde::Deserialize;
 use std::ops::DerefMut;
 
+use crate::datasources;
 use crate::models::{Dependency, ProjectSlug};
-use crate::projects;
 use crate::settings::Settings;
 use crate::web::schema::{DependencyOut, ProjectOut};
 use crate::web::utils::json_response;
@@ -65,7 +65,7 @@ async fn get_dependents_project_by_id_endpoint(
 
 #[derive(Deserialize)]
 struct PullQueryParams {
-    force: bool,
+    force: Option<bool>,
 }
 
 #[post("/{slug}/pull")]
@@ -79,7 +79,9 @@ async fn pull_project_datasource_endpoint(
 
     let state = lock.deref_mut();
 
-    projects::pull_project_datasource(settings.as_ref(), state, path.as_ref(), query.force)
+    let force = query.force.unwrap_or(false);
+
+    datasources::pull_project_datasources(settings.as_ref(), state, path.as_ref(), force)
         .await
         .map_err(error::ErrorInternalServerError)?;
 

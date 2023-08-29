@@ -1,10 +1,12 @@
 use crate::app_state::AppState;
 use crate::models::{Branch, BranchBase, Project, ProjectSlug};
 use crate::storage::Storer;
-use crate::versions;
-use anyhow::{anyhow, bail};
+use anyhow::bail;
 use async_recursion::async_recursion;
+use regex::Regex;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 pub fn get_branch<'p>(project: &'p Project, branch_name: &str) -> Option<&'p Branch> {
     project.branches.iter().find(|b| b.name == branch_name)
@@ -14,12 +16,16 @@ pub fn get_branch_mut<'p>(project: &'p mut Project, branch_name: &str) -> Option
     project.branches.iter_mut().find(|b| b.name == branch_name)
 }
 
-pub async fn create_branch<'p>(
+pub async fn create_branch_if_not_exists<'p, S>(
     state: &'p mut AppState,
     project_slug: &ProjectSlug,
     branch_name: &str,
-    base: BranchBase,
-) -> anyhow::Result<Option<&'p Branch>> {
+    base_name: Option<S>,
+    base_version_id: Option<u32>,
+) -> anyhow::Result<Option<&'p Branch>>
+where
+    S: Into<String>,
+{
     let Some(project) = state.projects.get_mut(project_slug) else {
         bail!("Project {} not found", project_slug);
     };
@@ -32,6 +38,8 @@ pub async fn create_branch<'p>(
         return Ok(None);
     }
 
+    let base = get_branch_base(project, base_name, base_version_id).await?;
+
     let version = project
         .branches
         .iter()
@@ -40,7 +48,8 @@ pub async fn create_branch<'p>(
 
     let Some(_) = version else {
         bail!(
-            "Source branch `{}` must contain specified version {} to fork it",
+            "Source branch {}/{} must contain specified version {} to fork it",
+            project_slug,
             base.name,
             base.version_id
         )
@@ -150,8 +159,7 @@ pub async fn delete_branch(
 }
 
 pub async fn get_branch_base<S>(
-    state: &AppState,
-    project_slug: &ProjectSlug,
+    project: &Project,
     base_name: Option<S>,
     base_version_id: Option<u32>,
 ) -> anyhow::Result<BranchBase>
@@ -162,25 +170,20 @@ where
         base_name.into()
     } else {
         // use project default branch if not base branch specified
-        state
-            .projects
-            .get(project_slug)
-            .map(|p| p.default_branch.clone())
-            .ok_or(anyhow!("Project {} not found", project_slug))?
+        project.default_branch.clone()
     };
 
     let version_id = if let Some(base_version_id) = base_version_id {
         base_version_id
     } else {
         // use base branch latest version if not version specified
-        let versions =
-            versions::crud::get_versions(state, project_slug, &name).ok_or(anyhow::anyhow!(
-                "Versions not found for branch `{}` of {}",
-                name,
-                project_slug
-            ))?;
+        let last = project
+            .branches
+            .iter()
+            .find(|b| b.name == name)
+            .and_then(|b| b.versions.last());
 
-        if let Some(last) = versions.last() {
+        if let Some(last) = last {
             last.id
         } else {
             bail!("Base branch must have at least one version")
@@ -188,4 +191,45 @@ where
     };
 
     Ok(BranchBase { name, version_id })
+}
+
+pub fn sanitise_branch_name<S: Into<String>>(input: S) -> String {
+    let input = input.into();
+    let re = Regex::new(r"[^0-9a-zA-Z]").unwrap();
+    let replaced = re.replace_all(&input, "-").to_string();
+
+    // calculate input str hash
+    let mut s = DefaultHasher::new();
+    input.hash(&mut s);
+    let hash = s.finish();
+
+    // add hash suffix to replaced branch name
+    format!("{}-{}", replaced, hash)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::branches::sanitise_branch_name;
+
+    #[test]
+    fn test_encode_branch_name() {
+        let values = vec![
+            (
+                "feat: ad:d new functions123",
+                "feat--ad-d-new-functions123-3847141747850018672",
+            ),
+            (
+                "feat/ Add New+Functions",
+                "feat--Add-New-Functions-17811559900772270264",
+            ),
+            (
+                "feat /Add New:Functions",
+                "feat--Add-New-Functions-7569046335700543031",
+            ),
+        ];
+
+        for (input, result) in values {
+            assert_eq!(sanitise_branch_name(input), result)
+        }
+    }
 }
