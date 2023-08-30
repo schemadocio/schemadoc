@@ -38,7 +38,7 @@ export const VersionView: React.FC<VersionViewProps> = ({
   useEffect(() => {
     api.versions
       .get(project.slug, branchName, versionId)
-      .then(({ data }) => data && setVersion(data));
+      .then(({ data }) => data.result && setVersion(data.result));
   }, [project.slug, branchName, versionId]);
 
   useEffect(() => {

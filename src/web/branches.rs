@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::ops::DerefMut;
 
 use crate::branches;
-use crate::web::utils::json_response;
+use crate::web::utils::ApiResponse;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -19,7 +19,7 @@ async fn create_branch_endpoint(
     body: web::Json<CreateBranchBody>,
     path: web::Path<crate::models::ProjectSlug>,
     state: web::Data<crate::web::AppStateType>,
-) -> Result<impl actix_web::Responder, error::Error> {
+) -> Result<ApiResponse, error::Error> {
     let body = body.into_inner();
     let project_slug = path.as_ref();
 
@@ -35,7 +35,9 @@ async fn create_branch_endpoint(
     .await
     .map_err(error::ErrorBadRequest)?;
 
-    Ok(json_response(StatusCode::CREATED, &branch))
+    Ok((&branch, StatusCode::CREATED).into())
+
+    // Ok(json_response(StatusCode::CREATED, &branch))
 }
 
 #[derive(Deserialize, Debug)]

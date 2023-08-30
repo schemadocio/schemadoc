@@ -26,8 +26,8 @@ const ProjectOverviewServer: React.FC<ProjectOverviewServerProps> = ({
     }
 
     api.versions.list(project.slug, project.branches[0]).then(({ data }) => {
-      if (data.length > 0) {
-        setVersion(data[0]);
+      if (data.result.length > 0) {
+        setVersion(data.result[0]);
       }
     });
   }, [project.slug, project.branches]);

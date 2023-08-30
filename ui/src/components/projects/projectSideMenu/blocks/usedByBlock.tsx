@@ -18,7 +18,7 @@ const UsedByBlock: React.FC<UsedByBlockProps> = ({ project }) => {
 
   useEffect(() => {
     api.projects.dependents(project.slug).then(({ data }) => {
-      setDependents(data);
+      setDependents(data.result);
     });
   }, [project.slug]);
 

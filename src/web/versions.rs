@@ -2,7 +2,7 @@ use std::ops::DerefMut;
 
 use actix_web::http::StatusCode;
 use actix_web::web::Bytes;
-use actix_web::{error, get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{error, get, post, web, HttpRequest, Responder};
 use schemadoc_diff::schema_diff::HttpSchemaDiff;
 
 use crate::models::ProjectSlug;
@@ -10,25 +10,26 @@ use crate::settings::Settings;
 use crate::storage::Storer;
 use crate::versions::{crud, services, statistics};
 use crate::web::schema::VersionOut;
-use crate::web::utils::json_response;
+use crate::web::utils::ApiResponse;
 use crate::web::AppStateType;
 
 #[get("")]
 async fn list_versions_endpoint(
     path: web::Path<(ProjectSlug, String)>,
     state: web::Data<AppStateType>,
-) -> Result<impl Responder, error::Error> {
+) -> error::Result<ApiResponse> {
     let state = state.read().await;
 
     let (project_slug, branch_name) = path.as_ref();
 
     let Some(versions) = crud::get_versions(&state, project_slug, branch_name) else {
-        return Ok(json_response::<Vec<VersionOut>>(StatusCode::OK, &vec![]));
+        // Versions could not be initialized, so just return empty vec
+        return Ok((Vec::<VersionOut>::new(),).into());
     };
 
-    let results: Vec<_> = versions.iter().map(VersionOut::from).rev().collect();
+    let result: Vec<_> = versions.iter().map(VersionOut::from).rev().collect();
 
-    Ok(json_response(StatusCode::OK, &results))
+    Ok((result,).into())
 }
 
 #[post("")]
@@ -38,7 +39,7 @@ async fn add_version_endpoint(
     req: HttpRequest,
     state: web::Data<AppStateType>,
     settings: web::Data<Settings>,
-) -> Result<impl Responder, error::Error> {
+) -> error::Result<ApiResponse> {
     let (project_slug, branch_name) = path.as_ref();
 
     let mut state = state.write().await;
@@ -95,14 +96,14 @@ async fn add_version_endpoint(
 
     let result = version.as_ref().map(VersionOut::from);
 
-    Ok(json_response(StatusCode::CREATED, &result))
+    Ok((result, StatusCode::CREATED).into())
 }
 
 #[get("/{id}")]
 async fn get_version_by_id_endpoint(
     path: web::Path<(ProjectSlug, String, u32)>,
     state: web::Data<AppStateType>,
-) -> Result<impl Responder, error::Error> {
+) -> error::Result<ApiResponse> {
     let (project_slug, branch_name, id) = &path.into_inner();
 
     let state = state.read().await;
@@ -112,14 +113,14 @@ async fn get_version_by_id_endpoint(
 
     let result = VersionOut::from(version);
 
-    Ok(json_response(StatusCode::OK, &result))
+    Ok((result,).into())
 }
 
 #[get("/{id}/compare/{tgt_branch_name}/{tgt_id}")]
 async fn compare_two_versions_endpoint(
     path: web::Path<(ProjectSlug, String, u32, String, u32)>,
     state: web::Data<AppStateType>,
-) -> Result<impl Responder, error::Error> {
+) -> error::Result<ApiResponse> {
     let (project_slug, src_branch_name, src_version_id, tgt_branch_name, tgt_version_id) =
         path.as_ref();
 
@@ -139,7 +140,7 @@ async fn compare_two_versions_endpoint(
     })?;
 
     let Some(diff) = compare_result.get() else {
-        return Ok(HttpResponse::NoContent().finish());
+        return Ok((None::<Response>, StatusCode::NO_CONTENT).into());
     };
 
     let statistics = statistics::get_diff_statistics(diff);
@@ -150,17 +151,14 @@ async fn compare_two_versions_endpoint(
         statistics: statistics::DiffStatistics,
     }
 
-    Ok(json_response(
-        StatusCode::OK,
-        &Response { diff, statistics },
-    ))
+    Ok((Response { diff, statistics },).into())
 }
 
 #[get("/{id}/diff")]
 async fn get_version_diff_content_endpoint(
     path: web::Path<(ProjectSlug, String, u32)>,
     state: web::Data<AppStateType>,
-) -> Result<impl Responder, error::Error> {
+) -> error::Result<impl Responder> {
     let (project_slug, branch_name, id) = &path.into_inner();
 
     let state = state.read().await;

@@ -45,7 +45,7 @@ export const VersionCompare: React.FC<VersionCompareProps> = ({
 
     api.versions
       .compare(projectSlug, sourceBranch, sourceId, targetBranch, targetId)
-      .then(({ data }) => setDiff(data));
+      .then(({ data }) => setDiff(data.result));
   }, [projectSlug, sourceBranch, sourceId, targetBranch, targetId, allowSame]);
 
   if (sourceId === targetId && !allowSame) {

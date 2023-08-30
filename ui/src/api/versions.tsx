@@ -1,20 +1,21 @@
 import { AxiosInstance } from "axios";
 import { HttpSchemaDiff } from "../components/http-schema/models";
 import { Version, VersionStatistics } from "../components/versions/models";
+import { ApiResponse } from "./response";
 
 const versionsApi = (axios: AxiosInstance) => ({
   list: (projectSlug: string, branchName: string) =>
-    axios.get<Version[]>(
+    axios.get<ApiResponse<Version[]>>(
       `/v1/projects/${projectSlug}/branches/${encodeURI(branchName)}/versions`
     ),
   get: (projectSlug: string, branchName: string, id: number) =>
-    axios.get<Version>(
+    axios.get<ApiResponse<Version>>(
       `/v1/projects/${projectSlug}/branches/${encodeURI(
         branchName
       )}/versions/${id}`
     ),
   add: (projectSlug: string, branchName: string, id: number) =>
-    axios.post<Version | null>(
+    axios.post<ApiResponse<Version | null>>(
       `/v1/projects/${projectSlug}/branches/${encodeURI(
         branchName
       )}/versions/${id}`
@@ -32,7 +33,12 @@ const versionsApi = (axios: AxiosInstance) => ({
     tgtBranch: string,
     tgtId: number
   ) =>
-    axios.get<{ diff: HttpSchemaDiff; statistics: VersionStatistics } | null>(
+    axios.get<
+      ApiResponse<{
+        diff: HttpSchemaDiff;
+        statistics: VersionStatistics;
+      } | null>
+    >(
       `/v1/projects/${projectSlug}/branches/${encodeURI(
         srcBranch
       )}/versions/${srcId}/compare/${encodeURI(tgtBranch)}/${tgtId}`

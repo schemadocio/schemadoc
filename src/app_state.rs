@@ -49,7 +49,7 @@ impl AppState {
             config_storage.as_ref().unwrap_or(&storage),
             "schemadoc.yaml",
         )
-            .await?;
+        .await?;
 
         let default_branches: HashMap<_, _> = state_data
             .0
@@ -77,10 +77,9 @@ impl AppState {
                 let dependencies = config.dependencies.map(|deps| {
                     deps.into_iter()
                         .filter_map(|(project, def)| {
-                            let Some(branch) = default_branches.get(&project).cloned()
-                                else {
-                                    return None;
-                                };
+                            let Some(branch) = default_branches.get(&project).cloned() else {
+                                return None;
+                            };
 
                             let dependency = if let Ok(version) =
                                 serde_yaml::from_value::<u32>(def.clone())

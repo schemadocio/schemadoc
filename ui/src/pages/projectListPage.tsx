@@ -18,7 +18,7 @@ const ProjectListPage: React.FC<ProjectListPageProps> = () => {
     setIsLoading(true);
     api.projects
       .list()
-      .then((response) => setProjects(response.data))
+      .then(({ data }) => setProjects(data.result))
       .finally(() => setIsLoading(false));
   }, []);
 

@@ -16,7 +16,7 @@ const ProjectLayout: React.FC<ProjectLayoutProps> = ({}) => {
 
   useEffect(() => {
     if (projectSlug) {
-      api.projects.get(projectSlug).then(({ data }) => setProject(data));
+      api.projects.get(projectSlug).then(({ data }) => setProject(data.result));
     }
   }, [projectSlug]);
 

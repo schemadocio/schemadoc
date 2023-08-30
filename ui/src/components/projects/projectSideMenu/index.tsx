@@ -37,11 +37,9 @@ const ProjectSideMenu: React.FC<ProjectSideMenuProps> = ({ project }) => {
           bgColor="gray.100"
           borderRadius={5}
         >
-          <Link to="/projects">
-            <Text fontSize={12} color="gray.600">
-              Project
-            </Text>
-          </Link>
+          <Text fontSize={12} color="gray.600">
+            Project
+          </Text>
 
           <Link to="overview">
             <Text

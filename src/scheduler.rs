@@ -28,7 +28,7 @@ async fn pull(host: &str, port: u16, force: bool) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
 
     let response = client
-        .get(format!("http://{host}:{port}/v1/projects"))
+        .get(format!("http://{host}:{port}/api/v1/projects"))
         .send()
         .await?;
 
@@ -43,7 +43,7 @@ async fn pull(host: &str, port: u16, force: bool) -> anyhow::Result<()> {
             continue;
         }
 
-        let url = format!("http://{host}:{port}/v1/projects/{}/pull", project.slug);
+        let url = format!("http://{host}:{port}/api/v1/projects/{}/pull", project.slug);
 
         let response = client.post(url).query(&[("force", force)]).send().await;
 

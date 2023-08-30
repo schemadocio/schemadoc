@@ -1,5 +1,4 @@
-use actix_web::http::StatusCode;
-use actix_web::{error, get, post, web, Responder};
+use actix_web::{error, get, post, web};
 use serde::Deserialize;
 use std::ops::DerefMut;
 
@@ -7,39 +6,42 @@ use crate::datasources;
 use crate::models::{Dependency, ProjectSlug};
 use crate::settings::Settings;
 use crate::web::schema::{DependencyOut, ProjectOut};
-use crate::web::utils::json_response;
+use crate::web::utils::ApiResponse;
 use crate::web::AppStateType;
 
 #[get("")]
-async fn list_projects_endpoint(state: web::Data<AppStateType>) -> impl Responder {
+async fn list_projects_endpoint(state: web::Data<AppStateType>) -> ApiResponse {
     let state = state.read().await;
 
     let projects = state.projects.values().collect::<Vec<_>>();
 
     let out: Vec<_> = projects.into_iter().map(ProjectOut::from).collect();
 
-    json_response(StatusCode::OK, &out)
+    (&out,).into()
 }
 
 #[get("/{slug}")]
 async fn get_project_by_id_endpoint(
     path: web::Path<ProjectSlug>,
     state: web::Data<AppStateType>,
-) -> impl Responder {
+) -> ApiResponse {
     let state = state.read().await;
     let project = state.projects.get(&path.into_inner());
 
-    json_response(StatusCode::OK, &project.map(ProjectOut::from))
+    (&project.map(ProjectOut::from),).into()
 }
 
 #[get("/{slug}/dependents")]
 async fn get_dependents_project_by_id_endpoint(
     path: web::Path<ProjectSlug>,
     state: web::Data<AppStateType>,
-) -> Option<impl Responder> {
+) -> error::Result<ApiResponse> {
     let state = state.read().await;
 
-    let project = state.projects.get(&path.into_inner())?;
+    let project = state
+        .projects
+        .get(&path.into_inner())
+        .ok_or(error::ErrorNotFound("Project not found"))?;
 
     let dependents = state
         .projects
@@ -60,7 +62,7 @@ async fn get_dependents_project_by_id_endpoint(
 
     let body: Vec<_> = dependents.iter().map(DependencyOut::from).collect();
 
-    Some(json_response(StatusCode::OK, &body))
+    Ok((&body,).into())
 }
 
 #[derive(Deserialize)]
@@ -74,7 +76,7 @@ async fn pull_project_datasource_endpoint(
     settings: web::Data<Settings>,
     state: web::Data<AppStateType>,
     query: web::Query<PullQueryParams>,
-) -> Result<impl Responder, error::Error> {
+) -> error::Result<ApiResponse> {
     let mut lock = state.write().await;
 
     let state = lock.deref_mut();
@@ -85,7 +87,7 @@ async fn pull_project_datasource_endpoint(
         .await
         .map_err(error::ErrorInternalServerError)?;
 
-    Ok("Pulled")
+    Ok(("Pulled",).into())
 }
 
 pub fn get_projects_api_scope() -> actix_web::Scope {

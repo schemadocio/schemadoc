@@ -60,9 +60,9 @@ export const VersionCompareModal: React.FC<VersionCompareModalProps> = ({
   let sourceBranch = watch("sourceBranch");
   useEffect(() => {
     api.versions.list(project.slug, sourceBranch).then(({ data }) => {
-      setSourceVersions(data);
-      if (data.length > 0) {
-        setValue("sourceId", data[0].id);
+      setSourceVersions(data.result);
+      if (data.result.length > 0) {
+        setValue("sourceId", data.result[0].id);
       }
     });
   }, [project, sourceBranch, setSourceVersions, setValue, watch]);
@@ -70,9 +70,9 @@ export const VersionCompareModal: React.FC<VersionCompareModalProps> = ({
   let targetBranch = watch("targetBranch");
   useEffect(() => {
     api.versions.list(project.slug, targetBranch).then(({ data }) => {
-      setTargetVersions(data);
-      if (data.length > 0) {
-        setValue("targetId", data[0].id);
+      setTargetVersions(data.result);
+      if (data.result.length > 0) {
+        setValue("targetId", data.result[0].id);
       }
     });
   }, [project, targetBranch, setTargetVersions, setValue, watch]);

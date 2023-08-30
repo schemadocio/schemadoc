@@ -63,7 +63,7 @@ export const VersionList: React.FC<VersionListProps> = ({
   useEffect(() => {
     api.versions
       .list(project.slug, branchName)
-      .then(({ data }) => setVersions(data));
+      .then(({ data }) => setVersions(data.result));
   }, [project.slug, branchName]);
 
   const {

@@ -153,14 +153,14 @@ const DependencyDiff: React.FC<DependencyDiffProps> = ({ dependency }) => {
     api.versions
       .list(dependency.project, dependency.branch)
       .then(({ data }) => {
-        if (data.length > 0) {
+        if (data.result.length > 0) {
           setSearchParams((prev) => ({
             ...prev,
             dep: dependency.project,
             srcBranch: dependency.branch,
             src: String(dependency.version),
             tgtBranch: dependency.branch,
-            tgt: String(data[0].id),
+            tgt: String(data.result[0].id),
           }));
         } else {
           setSearchParams((prev) => ({
