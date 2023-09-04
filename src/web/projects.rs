@@ -5,8 +5,9 @@ use std::ops::DerefMut;
 use crate::datasources;
 use crate::models::{Dependency, ProjectSlug};
 use crate::settings::Settings;
+use crate::web::auth::BasicAuth;
+use crate::web::response::ApiResponse;
 use crate::web::schema::{DependencyOut, ProjectOut};
-use crate::web::utils::ApiResponse;
 use crate::web::AppStateType;
 
 #[get("")]
@@ -72,6 +73,7 @@ struct PullQueryParams {
 
 #[post("/{slug}/pull")]
 async fn pull_project_datasource_endpoint(
+    _: BasicAuth,
     path: web::Path<ProjectSlug>,
     settings: web::Data<Settings>,
     state: web::Data<AppStateType>,

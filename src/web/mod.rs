@@ -1,8 +1,9 @@
+pub mod auth;
 mod branches;
 mod common;
 mod projects;
-mod schema;
-mod utils;
+pub mod response;
+pub mod schema;
 mod versions;
 
 use actix_cors::Cors;

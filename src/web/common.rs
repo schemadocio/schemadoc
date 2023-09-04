@@ -1,10 +1,12 @@
 use crate::app_state::AppState;
+use crate::web::auth::BasicAuth;
 use crate::web::AppStateType;
-use actix_web::{error, get, web};
+use actix_web::{error, post, web};
 use std::ops::DerefMut;
 
-#[get("/invalidate-app-state")]
+#[post("/invalidate-app-state")]
 async fn invalidate_app_state_endpoint(
+    _: BasicAuth,
     state: web::Data<AppStateType>,
 ) -> Result<&'static str, error::Error> {
     let mut lock = state.write().await;

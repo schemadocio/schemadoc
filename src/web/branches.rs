@@ -4,7 +4,8 @@ use serde::Deserialize;
 use std::ops::DerefMut;
 
 use crate::branches;
-use crate::web::utils::ApiResponse;
+use crate::web::auth::BasicAuth;
+use crate::web::response::ApiResponse;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -16,6 +17,7 @@ struct CreateBranchBody {
 
 #[post("")]
 async fn create_branch_endpoint(
+    _: BasicAuth,
     body: web::Json<CreateBranchBody>,
     path: web::Path<crate::models::ProjectSlug>,
     state: web::Data<crate::web::AppStateType>,
@@ -47,6 +49,7 @@ struct DeleteBranchQuery {
 
 #[delete("/{branch_name}")]
 async fn delete_branch_endpoint(
+    _: BasicAuth,
     path: web::Path<(crate::models::ProjectSlug, String)>,
     query: web::Query<DeleteBranchQuery>,
     state: web::Data<crate::web::AppStateType>,

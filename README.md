@@ -86,8 +86,6 @@ At the moment these parts are not implemented or are partially implemented:
 - **OpenAPI**: `info`, `tags`, `webhooks`, `links`, `servers`, `security`, parts from OpenAPI 3.1, ...
 - **Breaking Changes** are not displayed and are only used internally in alerts with `kind=breaking`
 - **Persistence** only for OS file system supported for now
-- **Modifications** for now do not require any authorization, and could be called by anyone who has access to modifying
-  endpoints.
 
 ## Getting Started
 
@@ -97,15 +95,19 @@ At the moment these parts are not implemented or are partially implemented:
 
 ## Environment variables
 
-| Variable                        | Default         | Description                                                               |
-|---------------------------------|-----------------|---------------------------------------------------------------------------|
-| `SD_PERSISTENCE`                | `local`         | Persistence type, one of [`local`]                                        |
-| `SD_PERSISTENCE_PATH`           | `./persistence` | Path to load and store persistent data in selected persistence            |
-| `SD_CONFIG_PERSISTENCE`         | `local`         | Persistence type for `schemadoc.yaml`, one of [`local`]                   |
-| `SD_CONFIG_PERSISTENCE_PATH`    | `./persistence` | Path to read `schemadoc.yaml` in selected config persistence              |
-| `SD_PULL_DISABLE_AFTER_ATTEMPT` | `0`             | After how many errors to disable datasource pulling, `0` - do not disable |
+| Variable                        | Default          | Description                                                                                            |
+|---------------------------------|------------------|--------------------------------------------------------------------------------------------------------|
+| `SD_BASIC_AUTH`                 | `admin:password` | Authorization credentials for modification operations: `Authorization: Basic <base64($SD_BASIC_AUTH)>` |
+| `SD_PERSISTENCE`                | `local`          | Persistence type, one of [`local`]                                                                     |
+| `SD_PERSISTENCE_PATH`           | `./persistence`  | Path to load and store persistent data in selected persistence                                         |
+| `SD_CONFIG_PERSISTENCE`         | `local`          | Persistence type for `schemadoc.yaml`, one of [`local`]                                                |
+| `SD_CONFIG_PERSISTENCE_PATH`    | `./persistence`  | Path to read `schemadoc.yaml` in selected config persistence                                           |
+| `SD_PULL_DISABLE_AFTER_ATTEMPT` | `0`              | After how many errors to disable datasource pulling, set `0` to do not disable pulling                 |
 
 ## Modifying Endpoints
+
+**All the endpoints below require HTTP request header `Authorization: Basic <token>` provided, where `token`
+is `base64($SD_BASIC_AUTH)` from environment variables**
 
 ### `POST /api/v1/projects/{slug}/branches/{name}/versions`
 
@@ -113,14 +115,14 @@ Add new version to the specified project branch.
 
 **Parameters:**
 
-| name                       | in     | type             | description                                                          |
-|----------------------------|--------|------------------|----------------------------------------------------------------------|
-| `slug`                     | path   | `string`         | Project slug                                                         |
-| `name`                     | path   | `string`         | Branch name                                                          |
-|                            | body   | `json`           | Schema content in json                                               |
-| `X-Message`                | header | `string \| null` | Version description                                                  |
-| `X-Branch-Base-Name`       | header | `string \| null` | Base name of new branch if the branch `name` does not exist          |
-| `X-Branch-Base-Version-Id` | header | `string \| null` | Version id from base branch from which the new branch will be forked |
+| name                       | in     | type               | description                                                          |
+|----------------------------|--------|--------------------|----------------------------------------------------------------------|
+| `slug`                     | path   | `string`           | Project slug                                                         |
+| `name`                     | path   | `string`           | Branch name                                                          |
+|                            | body   | `json`             | Schema content in json                                               |
+| `X-Message`                | header | `optional[string]` | Version description                                                  |
+| `X-Branch-Base-Name`       | header | `optional[string]` | Base name of new branch if the branch `name` does not exist          |
+| `X-Branch-Base-Version-Id` | header | `optional[string]` | Version id from base branch from which the new branch will be forked |
 
 **Response:**
 
@@ -133,12 +135,12 @@ Creates new branch
 
 **Parameters:**
 
-| name            | in   | type             | description                                                          |
-|-----------------|------|------------------|----------------------------------------------------------------------|
-| `slug`          | path | `string`         | Project slug                                                         |
-| `name`          | body | `string`         | Branch name to create                                                |
-| `baseName`      | body | `string \| null` | Base branch name, if `null` then project's default branch used       |
-| `baseVersionId` | body | `number \| null` | Version id from base branch from which the new branch will be forked |
+| name            | in   | type               | description                                                          |
+|-----------------|------|--------------------|----------------------------------------------------------------------|
+| `slug`          | path | `string`           | Project slug                                                         |
+| `name`          | body | `string`           | Branch name to create                                                |
+| `baseName`      | body | `optional[string]` | Base branch name, if `null` then project's default branch used       |
+| `baseVersionId` | body | `optional[number]` | Version id from base branch from which the new branch will be forked |
 
 **Response:**
 
@@ -150,11 +152,11 @@ Removes branch and all its versions
 
 **Parameters:**
 
-| name    | in    | type           | description                                           |
-|---------|-------|----------------|-------------------------------------------------------|
-| `slug`  | path  | `string`       | Project slug                                          |
-| `name`  | path  | `string`       | Branch name to remove                                 |
-| `force` | query | `bool \| null` | If `true` then cascade remove all descenders branches |
+| name    | in    | type             | description                                           |
+|---------|-------|------------------|-------------------------------------------------------|
+| `slug`  | path  | `string`         | Project slug                                          |
+| `name`  | path  | `string`         | Branch name to remove                                 |
+| `force` | query | `optional[bool]` | If `true` then cascade remove all descenders branches |
 
 **Response:**
 
@@ -166,10 +168,10 @@ Pull enabled project datasources
 
 **Parameters:**
 
-| name    | in    | type           | description                                                               |
-|---------|-------|----------------|---------------------------------------------------------------------------|
-| `slug`  | path  | `string`       | Project slug                                                              |
-| `force` | query | `bool \| null` | If `true` then pull even if there is an active timeout for the datasource |
+| name    | in    | type             | description                                                               |
+|---------|-------|------------------|---------------------------------------------------------------------------|
+| `slug`  | path  | `string`         | Project slug                                                              |
+| `force` | query | `optional[bool]` | If `true` then pull even if there is an active timeout for the datasource |
 
 **Response:**
 

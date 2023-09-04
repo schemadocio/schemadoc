@@ -72,9 +72,6 @@ async fn main() -> anyhow::Result<()> {
             port,
             interval,
             force,
-        } => {
-            scheduler::schedule(&host, port, interval, force).await;
-            Ok(())
-        }
+        } => scheduler::schedule(&host, port, interval, force).await,
     }
 }

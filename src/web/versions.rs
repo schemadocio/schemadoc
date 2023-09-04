@@ -9,8 +9,9 @@ use crate::models::ProjectSlug;
 use crate::settings::Settings;
 use crate::storage::Storer;
 use crate::versions::{crud, services, statistics};
+use crate::web::auth::BasicAuth;
+use crate::web::response::ApiResponse;
 use crate::web::schema::VersionOut;
-use crate::web::utils::ApiResponse;
 use crate::web::AppStateType;
 
 #[get("")]
@@ -34,6 +35,7 @@ async fn list_versions_endpoint(
 
 #[post("")]
 async fn add_version_endpoint(
+    _: BasicAuth,
     path: web::Path<(ProjectSlug, String)>,
     bytes: Bytes,
     req: HttpRequest,
